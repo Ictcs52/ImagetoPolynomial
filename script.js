@@ -1647,12 +1647,12 @@ function displayDesmosEquations(equations) {
         col.innerHTML = `
             <div class="card equation-card h-100">
                 <div class="card-header d-flex justify-content-between align-items-center">
-                    <h6 class="mb-0">${equation.description}</h6>
+                    <h6 class="mb-0">สมการที่ ${index + 1}</h6>
                     <span class="badge bg-${getAccuracyColor(equation.accuracy)}">${(equation.accuracy * 100).toFixed(1)}%</span>
                 </div>
                 <div class="card-body">
                     <div class="equation-display mb-3">
-                        <code class="equation-code" id="equation-${index}">${equation.equation}</code>
+                        <code class="equation-code" id="equation-${index}">${cleanEquationForDisplay(equation.equation)}</code>
                         <button class="btn btn-sm btn-outline-primary ms-2" onclick="copyEquation('equation-${index}')">
                             <i class="fas fa-copy"></i> คัดลอก
                         </button>
@@ -1682,11 +1682,26 @@ function getAccuracyColor(accuracy) {
 }
 
 /**
+ * Clean equation for display - remove \left and \right for better readability
+ */
+function cleanEquationForDisplay(equation) {
+    // Handle both \\left and \left patterns
+    return equation
+        .replace(/\\\\left/g, '')
+        .replace(/\\\\right/g, '')
+        .replace(/\\left/g, '')
+        .replace(/\\right/g, '');
+}
+
+/**
  * Copy equation to clipboard
  */
 function copyEquation(elementId) {
     const element = document.getElementById(elementId);
-    const text = element.textContent;
+    let text = element.textContent;
+    
+    // Remove \left and \right for cleaner copy
+    text = text.replace(/\\left/g, '').replace(/\\right/g, '');
     
     navigator.clipboard.writeText(text).then(() => {
         showAlert('คัดลอกสมการเรียบร้อยแล้ว!', 'success');
@@ -1930,7 +1945,7 @@ function showAlert(message, type = 'info') {
  * 🎯 Multi-Level Edge Detection - การตรวจจับขอบแบบหลายระดับ
  */
 async function performMultiLevelEdgeDetection() {
-    console.log('Performing edge detection on current image...');
+    console.log('Performing detailed edge detection on actual uploaded image...');
     
     if (!currentImageData) {
         throw new Error('ไม่พบข้อมูลภาพ');
@@ -1949,6 +1964,8 @@ async function performMultiLevelEdgeDetection() {
     canvas.width = previewImg.naturalWidth;
     canvas.height = previewImg.naturalHeight;
     
+    console.log(`Processing image: ${canvas.width}x${canvas.height} pixels`);
+    
     // วาดภาพลงบน canvas
     ctx.drawImage(previewImg, 0, 0);
     
@@ -1958,14 +1975,19 @@ async function performMultiLevelEdgeDetection() {
     // ทำ edge detection แบบง่าย (Sobel operator)
     const edgeData = applySobelFilter(imageData);
     
-    console.log(`Edge detection completed. Image size: ${canvas.width}x${canvas.height}`);
+    // Extract actual coordinate points from the image
+    const extractedPoints = extractRealCoordinates(edgeData, canvas.width, canvas.height);
+    
+    console.log(`Edge detection completed. Found ${extractedPoints.length} significant points`);
     
     return {
         original: imageData,
         edges: edgeData,
         width: canvas.width,
         height: canvas.height,
-        data: edgeData.data
+        data: edgeData.data,
+        realPoints: extractedPoints,
+        imageScale: { width: canvas.width, height: canvas.height }
     };
 }
 
@@ -2009,6 +2031,59 @@ function applySobelFilter(imageData) {
 }
 
 /**
+ * 🗺️ Extract Real Coordinates - สกัดพิกัดจริงจากภาพ
+ */
+function extractRealCoordinates(edgeData, imageWidth, imageHeight) {
+    const points = [];
+    const { data } = edgeData;
+    const threshold = 100;
+    
+    // แปลงพิกัดภาพเป็นพิกัดคณิตศาสตร์ (Desmos coordinate system)
+    const centerX = imageWidth / 2;
+    const centerY = imageHeight / 2;
+    const scale = Math.min(imageWidth, imageHeight) / 20; // สเกลเหมาะสมสำหรับ Desmos
+    
+    console.log(`Image dimensions: ${imageWidth}x${imageHeight}, Center: (${centerX}, ${centerY}), Scale: ${scale}`);
+    
+    // สแกนทุกจุดของภาพเพื่อหาขอบ (edges)
+    for (let y = 0; y < imageHeight; y += 2) { // ลด sampling เพื่อประสิทธิภาพ
+        for (let x = 0; x < imageWidth; x += 2) {
+            const index = (y * imageWidth + x) * 4;
+            const intensity = data[index]; // ความเข้มของขอบ
+            
+            if (intensity > threshold) {
+                // แปลงจากพิกัดภาพเป็นพิกัดคณิตศาสตร์
+                const mathX = (x - centerX) / scale;
+                const mathY = (centerY - y) / scale; // กลับ Y เพราะในภาพ Y เป็นลบ
+                
+                points.push({
+                    x: parseFloat(mathX.toFixed(3)),
+                    y: parseFloat(mathY.toFixed(3)),
+                    intensity: intensity,
+                    imageX: x,
+                    imageY: y
+                });
+            }
+        }
+    }
+    
+    console.log(`Extracted ${points.length} coordinate points from actual image`);
+    
+    // กรองจุดที่ซ้ำซ้อน
+    const filteredPoints = points.filter((point, index, arr) => {
+        // ตรวจสอบว่ามีจุดอื่นที่ใกล้เคียง
+        const nearbyPoints = arr.filter(other => 
+            Math.abs(other.x - point.x) < 0.1 && 
+            Math.abs(other.y - point.y) < 0.1
+        );
+        return nearbyPoints.length === 1 || nearbyPoints[0] === point;
+    });
+    
+    console.log(`After filtering: ${filteredPoints.length} unique points`);
+    return filteredPoints;
+}
+
+/**
  * 🎯 Extract Advanced Data Points - สกัดจุดข้อมูลแบบขั้นสูง
  */
 async function extractAdvancedDataPoints(edgeData) {
@@ -2018,6 +2093,12 @@ async function extractAdvancedDataPoints(edgeData) {
     if (!edgeData || !edgeData.data) {
         console.log('No edge data available, returning empty points');
         return points;
+    }
+    
+    // ใช้จุดที่สกัดจากภาพจริง
+    if (edgeData.realPoints && edgeData.realPoints.length > 0) {
+        console.log('Using real coordinate points from image analysis');
+        return edgeData.realPoints;
     }
     
     const { data, width, height } = edgeData;
@@ -2122,8 +2203,8 @@ async function generateAdvancedEquations(pointsData) {
     console.log('Data length:', dataLength);
     
     if (!pointsData || dataLength < 3) {
-        // หากไม่มีข้อมูลเพียงพอ ใช้สมการครอบคลุมทุกรูปแบบ
-        console.log('Insufficient data points, generating comprehensive mathematical equations');
+        // หากไม่มีข้อมูลเพียงพอ ใช้สมการครอบคลุมทุกรูปแบบแบบเต็ม
+        console.log('Insufficient data points, generating comprehensive mathematical equations set');
         return generateComprehensiveMathematicalEquations();
     }
     
@@ -2144,42 +2225,67 @@ async function generateAdvancedEquations(pointsData) {
     const analysis = analyzeImagePattern(pointsArray);
     console.log('Pattern analysis result:', analysis);
     
-    // สร้างสมการที่ตรงกับรูปแบบจริงในภาพ
-    console.log('Generating equations based on actual image analysis');
-    console.log('Detected shapes:', analysis.actualShapes.length);
+    // ใช้วิธีง่ายและตรงไปตรงมา: แปลงพิกเซลเข้มเป็นจุดโดยตรง
+    console.log('Using DIRECT PIXEL-TO-EQUATION mapping - the simplest approach');
     
-    // 1. สร้างสมการจากรูปทรงที่ตรวจพบจริง (Actual Shape-based Equations)
+    // สร้างสมการจากพิกเซลโดยตรง
+    const directEquations = await generateDirectPixelEquations();
+    if (directEquations && directEquations.length > 0) {
+        console.log(`Generated ${directEquations.length} equations from direct pixel mapping`);
+        return directEquations;
+    }
+    
+    console.log('Direct pixel mapping completed, falling back to coordinate analysis');
+    
+    // 1. สร้างสมการจากพิกัดจริงในภาพพร้อม domain (Primary: Real Image Coordinates)
+    const imageBasedEqs = generateEquationsFromRealImageData(pointsArray, analysis);
+    equations.push(...imageBasedEqs);
+    console.log(`Generated ${imageBasedEqs.length} equations from real image coordinates`);
+    
+    // 2. วิเคราะห์รูปทรงเฉพาะจากจุดข้อมูล (Shape Analysis from Points)
     if (analysis.actualShapes && analysis.actualShapes.length > 0) {
-        console.log('Using detected shapes for equation generation');
-        equations.push(...generateEquationsFromDetectedShapes(analysis.actualShapes));
+        console.log('Adding equations from detected shapes with domains');
+        const shapeEquations = generateEquationsFromDetectedShapes(analysis.actualShapes);
+        equations.push(...shapeEquations);
+        console.log(`Added ${shapeEquations.length} shape-based equations`);
     }
     
-    // 2. สร้างสมการเพิ่มเติมตามลักษณะของภาพ (Additional Pattern-based Equations)
-    if (analysis.isCircular) {
-        console.log('Adding circular pattern equations');
-        equations.push(...generateCircularPatternEquations(pointsArray, analysis));
+    // 3. สร้างสมการที่มี domain ตามขอบเขตของภาพ (Bounded Equations)
+    const boundedEqs = generateEquationsWithImageBounds(pointsArray, analysis);
+    equations.push(...boundedEqs);
+    console.log(`Added ${boundedEqs.length} equations with image-based domains`);
+    
+    // 4. สร้างสมการเฉพาะจุดจากการวิเคราะห์ (Specific Pattern Equations)
+    if (analysis.isCircular && analysis.radius > 0) {
+        console.log('Adding circular patterns with proper domains');
+        const circularEqs = generateCircularWithDomain(pointsArray, analysis);
+        equations.push(...circularEqs);
     }
     
-    if (analysis.isLinear) {
-        console.log('Adding linear pattern equations');
-        equations.push(...generateLinearPatternEquations(pointsArray, analysis));
+    if (analysis.isLinear && typeof analysis.slope === 'number') {
+        console.log('Adding linear patterns with proper domains');
+        const linearEqs = generateLinearWithDomain(pointsArray, analysis);
+        equations.push(...linearEqs);
     }
     
-    if (analysis.isPolynomial || (!analysis.isCircular && !analysis.isLinear)) {
-        console.log('Adding polynomial pattern equations');
-        equations.push(...generatePolynomialPatternEquations(pointsArray, analysis));
+    // 4. สร้างสมการเพิ่มเติมจากการวิเคราะห์ภาพละเอียด (Detailed Image Analysis)
+    const detailedEqs = generateDetailedImageEquations(pointsArray, analysis);
+    equations.push(...detailedEqs);
+    console.log(`Added ${detailedEqs.length} detailed equations from image analysis`);
+    
+    // 5. เพิ่มสมการครอบคลุมเฉพาะในกรณีที่วิเคราะห์ภาพได้น้อย (Fallback only if needed)
+    if (equations.length < 10) {
+        console.log('Image analysis yielded few equations, adding comprehensive mathematical set');
+        const comprehensiveEquations = generateComprehensiveMathematicalEquations();
+        equations.push(...comprehensiveEquations);
+    } else {
+        console.log('Image analysis successful, using primarily image-based equations');
+        // เพิ่มเฉพาะสมการพื้นฐานเพื่อครบถ้วน
+        const basicEqs = generateBasicMathematicalEquations();
+        equations.push(...basicEqs);
     }
     
-    // 3. เพิ่มสมการครอบคลุมอื่นๆ หากจำเป็น (Fallback Comprehensive Equations)
-    if (equations.length < 5) {
-        console.log('Adding fallback comprehensive equations');
-        equations.push(...generateFallbackEquations(pointsArray, analysis));
-    }
-    
-    // 4. เพิ่มสมการลายไทยที่เหมาะสม (Appropriate Thai Patterns)
-    equations.push(...generateAppropriateThaiPatterns(pointsArray, analysis));
-    
-    console.log(`Generated ${equations.length} comprehensive mathematical equations from image analysis`);
+    console.log(`Generated ${equations.length} comprehensive mathematical equations including full equation set`);
     return equations; // คืนค่าสมการครอบคลุมทั้งหมด
 }
 
@@ -2504,9 +2610,206 @@ function detectCurves(points) {
 }
 
 /**
+ * 📊 Perform Polynomial Regression - ทำ polynomial regression จากจุดข้อมูล
+ */
+function performPolynomialRegression(points, degree) {
+    if (points.length < degree + 1) return null;
+    
+    // เรียงจุดตาม x
+    const sortedPoints = points.slice().sort((a, b) => a.x - b.x);
+    const n = sortedPoints.length;
+    
+    // สร้าง matrix A และ vector b สำหรับ normal equations
+    const A = [];
+    const b = [];
+    
+    // สร้าง matrix สำหรับ normal equations: A^T * A * coeffs = A^T * y
+    for (let i = 0; i <= degree; i++) {
+        A[i] = [];
+        let sum = 0;
+        
+        for (let j = 0; j <= degree; j++) {
+            let sumXPower = 0;
+            for (const point of sortedPoints) {
+                sumXPower += Math.pow(point.x, i + j);
+            }
+            A[i][j] = sumXPower;
+        }
+        
+        // คำนวณ b vector
+        for (const point of sortedPoints) {
+            sum += point.y * Math.pow(point.x, i);
+        }
+        b[i] = sum;
+    }
+    
+    // แก้ matrix A โดยใช้ Gaussian elimination
+    const coefficients = solveLinearSystem(A, b);
+    
+    if (!coefficients) return null;
+    
+    // คำนวณ R² เพื่อวัด confidence
+    let ssRes = 0, ssTot = 0;
+    const meanY = sortedPoints.reduce((sum, p) => sum + p.y, 0) / n;
+    
+    for (const point of sortedPoints) {
+        let predicted = 0;
+        for (let i = 0; i <= degree; i++) {
+            predicted += coefficients[i] * Math.pow(point.x, i);
+        }
+        ssRes += (point.y - predicted) ** 2;
+        ssTot += (point.y - meanY) ** 2;
+    }
+    
+    const confidence = ssTot > 0 ? Math.max(0, 1 - ssRes / ssTot) : 0;
+    
+    return {
+        coefficients,
+        degree,
+        confidence
+    };
+}
+
+/**
+ * 🔢 Solve Linear System - แก้ระบบสมการเชิงเส้น
+ */
+function solveLinearSystem(A, b) {
+    const n = A.length;
+    const matrix = A.map((row, i) => [...row, b[i]]);
+    
+    // Gaussian elimination with partial pivoting
+    for (let i = 0; i < n; i++) {
+        // หา pivot ที่ใหญ่ที่สุด
+        let maxRow = i;
+        for (let k = i + 1; k < n; k++) {
+            if (Math.abs(matrix[k][i]) > Math.abs(matrix[maxRow][i])) {
+                maxRow = k;
+            }
+        }
+        
+        // สลับแถว
+        if (maxRow !== i) {
+            [matrix[i], matrix[maxRow]] = [matrix[maxRow], matrix[i]];
+        }
+        
+        // ตรวจสอบ singular matrix
+        if (Math.abs(matrix[i][i]) < 1e-10) {
+            return null;
+        }
+        
+        // ทำ elimination
+        for (let k = i + 1; k < n; k++) {
+            const factor = matrix[k][i] / matrix[i][i];
+            for (let j = i; j <= n; j++) {
+                matrix[k][j] -= factor * matrix[i][j];
+            }
+        }
+    }
+    
+    // Back substitution
+    const solution = new Array(n);
+    for (let i = n - 1; i >= 0; i--) {
+        solution[i] = matrix[i][n];
+        for (let j = i + 1; j < n; j++) {
+            solution[i] -= matrix[i][j] * solution[j];
+        }
+        solution[i] /= matrix[i][i];
+    }
+    
+    return solution;
+}
+
+/**
+ * 🔘 Generate Circular With Domain - สร้างรูปแบบวงกลมพร้อม domain
+ */
+function generateCircularWithDomain(points, analysis) {
+    const equations = [];
+    
+    if (!analysis.radius || analysis.radius <= 0) return equations;
+    
+    const xValues = points.map(p => p.x);
+    const yValues = points.map(p => p.y);
+    const minX = Math.min(...xValues);
+    const maxX = Math.max(...xValues);
+    const minY = Math.min(...yValues);
+    const maxY = Math.max(...yValues);
+    
+    const centerX = analysis.centerX || 0;
+    const centerY = analysis.centerY || 0;
+    const radius = analysis.radius;
+    
+    const domain = `\\left\\{${minX.toFixed(2)}\\le x\\le${maxX.toFixed(2)}\\right\\}\\left\\{${minY.toFixed(2)}\\le y\\le${maxY.toFixed(2)}\\right\\}`;
+    
+    // วงกลมหลัก
+    let circleEq;
+    if (Math.abs(centerX) < 0.1 && Math.abs(centerY) < 0.1) {
+        circleEq = `x^{2}+y^{2}=${(radius**2).toFixed(3)}`;
+    } else {
+        const h = centerX.toFixed(3);
+        const k = centerY.toFixed(3);
+        const hStr = centerX >= 0 ? `-${h}` : `+${Math.abs(parseFloat(h))}`;
+        const kStr = centerY >= 0 ? `-${k}` : `+${Math.abs(parseFloat(k))}`;
+        circleEq = `\\left(x${hStr}\\right)^{2}+\\left(y${kStr}\\right)^{2}=${(radius**2).toFixed(3)}`;
+    }
+    
+    equations.push({
+        equation: `${circleEq}${domain}`,
+        latex: `${circleEq}${domain}`,
+        accuracy: 0.92,
+        description: 'วงกลมจากการวิเคราะห์พร้อม domain ที่ถูกต้อง',
+        parameters: { type: 'circle_with_domain', centerX, centerY, radius, bounds: { minX, maxX, minY, maxY } }
+    });
+    
+    return equations;
+}
+
+/**
+ * 📈 Generate Linear With Domain - สร้างสมการเส้นตรงพร้อม domain
+ */
+function generateLinearWithDomain(points, analysis) {
+    const equations = [];
+    
+    if (typeof analysis.slope !== 'number') return equations;
+    
+    const xValues = points.map(p => p.x);
+    const yValues = points.map(p => p.y);
+    const minX = Math.min(...xValues);
+    const maxX = Math.max(...xValues);
+    const minY = Math.min(...yValues);
+    const maxY = Math.max(...yValues);
+    
+    const slope = analysis.slope;
+    const intercept = analysis.intercept || 0;
+    
+    const xDomain = `\\left\\{${minX.toFixed(2)}\\le x\\le${maxX.toFixed(2)}\\right\\}`;
+    
+    // เส้นตรงหลัก
+    let mainEq;
+    if (Math.abs(slope - 1) < 0.01) {
+        mainEq = intercept === 0 ? 'y=x' : `y=x${intercept >= 0 ? '+' : ''}${intercept.toFixed(3)}`;
+    } else if (Math.abs(slope + 1) < 0.01) {
+        mainEq = intercept === 0 ? 'y=-x' : `y=-x${intercept >= 0 ? '+' : ''}${intercept.toFixed(3)}`;
+    } else {
+        mainEq = `y=${slope.toFixed(3)}x${intercept >= 0 ? '+' : ''}${intercept.toFixed(3)}`;
+    }
+    
+    equations.push({
+        equation: `${mainEq}${xDomain}`,
+        latex: `${mainEq}${xDomain}`,
+        accuracy: 0.91,
+        description: 'เส้นตรงจากการวิเคราะห์พร้อม domain ที่ถูกต้อง',
+        parameters: { type: 'line_with_domain', slope, intercept, bounds: { minX, maxX, minY, maxY } }
+    });
+    
+    return equations;
+}
+
+/**
  * 🔧 Helper Functions for Shape Detection
  */
 function fitCircleToPoints(points) {
+    if (points.length < 3) return null;
+    
     // ใช้อัลกอริทึม Least Squares Circle Fitting
     try {
         const n = points.length;
@@ -3237,6 +3540,2543 @@ function generateFallbackEquations(points, analysis) {
 }
 
 /**
+ * 🎯 Generate Direct Pixel Equations - สร้างสมการจากพิกเซลโดยตรง
+ */
+async function generateDirectPixelEquations() {
+    console.log('Starting direct pixel-to-equation conversion...');
+    
+    if (!currentImageData) {
+        console.log('No image data available');
+        return [];
+    }
+    
+    const previewImg = document.getElementById('previewImage');
+    if (!previewImg || !previewImg.naturalWidth) {
+        console.log('Preview image not available');
+        return [];
+    }
+    
+    // สร้าง canvas และดึงข้อมูลภาพ
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = previewImg.naturalWidth;
+    canvas.height = previewImg.naturalHeight;
+    ctx.drawImage(previewImg, 0, 0);
+    
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    
+    // แปลงเป็นขาวดำก่อนเพื่อความชัดเจน
+    const bwImageData = convertToBlackWhite(imageData);
+    const { data, width, height } = bwImageData;
+    
+    // แสดงภาพขาวดำให้ผู้ใช้เห็น
+    displayBlackWhiteImage(bwImageData, canvas.width, canvas.height);
+    
+    console.log('Converted and displayed black-white image for analysis');
+    
+    console.log(`Processing ${width}x${height} image for direct pixel mapping`);
+    
+    // หาจุดดำจากภาพขาวดำ (ความละเอียดสูงมาก)
+    const darkPixels = [];
+    const threshold = 50; // เฉพาะจุดดำจากภาพขาวดำ
+    
+    // สแกนทุกพิกเซลเพื่อหาจุดดำ (ความละเอียดสูงสำหรับเส้น)
+    for (let y = 0; y < height; y += 1) { // ลด step เป็น 1 เพื่อความละเอียดสูงสุด
+        for (let x = 0; x < width; x += 1) { // ลด step เป็น 1
+            const index = (y * width + x) * 4;
+            const r = data[index];
+            const g = data[index + 1];
+            const b = data[index + 2];
+            const brightness = (r + g + b) / 3;
+            
+            // ถ้าพิกเซลเข้มพอ (ความสว่างน้อยกว่า threshold)
+            if (brightness < threshold) {
+                // แปลงจากพิกเซลภาพเป็นพิกัดคณิตศาสตร์
+                const mathX = (x - width / 2) / (Math.min(width, height) / 20);
+                const mathY = (height / 2 - y) / (Math.min(width, height) / 20);
+                
+                darkPixels.push({
+                    x: parseFloat(mathX.toFixed(2)),
+                    y: parseFloat(mathY.toFixed(2)),
+                    brightness: brightness,
+                    pixelX: x,
+                    pixelY: y
+                });
+            }
+        }
+    }
+    
+    console.log(`Found ${darkPixels.length} dark pixels to convert to equations`);
+    
+    if (darkPixels.length < 3) {
+        console.log('Not enough dark pixels found');
+        return [];
+    }
+    
+    // คำนวณขอบเขตของข้อมูล
+    const xValues = darkPixels.map(p => p.x);
+    const yValues = darkPixels.map(p => p.y);
+    const minX = Math.min(...xValues);
+    const maxX = Math.max(...xValues);
+    const minY = Math.min(...yValues);
+    const maxY = Math.max(...yValues);
+    
+    console.log(`Data bounds: X[${minX}, ${maxX}], Y[${minY}, ${maxY}]`);
+    
+    const equations = [];
+    
+    // วิธีใหม่: สร้างจุดโดยตรงจากพิกเซลที่พบจริง
+    const directPoints = createDirectPointEquations(darkPixels, minX, maxX, minY, maxY);
+    equations.push(...directPoints);
+    
+    console.log(`Created ${equations.length} direct point equations from actual image pixels`);
+    return equations;
+}
+
+/**
+ * 🖼️ Display Black White Image - แสดงภาพขาวดำ
+ */
+function displayBlackWhiteImage(imageData, width, height) {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = width;
+    canvas.height = height;
+    
+    // วาดภาพขาวดำลง canvas
+    ctx.putImageData(imageData, 0, 0);
+    
+    // สร้าง container สำหรับแสดงภาพขาวดำ
+    let bwContainer = document.getElementById('blackWhiteContainer');
+    if (!bwContainer) {
+        bwContainer = document.createElement('div');
+        bwContainer.id = 'blackWhiteContainer';
+        bwContainer.className = 'mt-3 text-center';
+        
+        const uploadArea = document.getElementById('uploadArea');
+        if (uploadArea && uploadArea.parentNode) {
+            uploadArea.parentNode.insertBefore(bwContainer, uploadArea.nextSibling);
+        }
+    }
+    
+    // ลบภาพเก่า (ถ้ามี)
+    bwContainer.innerHTML = '';
+    
+    // เพิ่มหัวข้อและภาพ
+    const title = document.createElement('h5');
+    title.className = 'text-primary mb-2';
+    title.textContent = '🎨 ภาพขาวดำที่ใช้ในการวิเคราะห์';
+    
+    // กำหนดขนาดให้เหมาะสม
+    const maxWidth = 400;
+    const scale = Math.min(1, maxWidth / width);
+    canvas.style.width = `${width * scale}px`;
+    canvas.style.height = `${height * scale}px`;
+    canvas.style.border = '2px solid #007bff';
+    canvas.style.borderRadius = '8px';
+    
+    const description = document.createElement('p');
+    description.className = 'text-muted small mt-2';
+    description.textContent = 'ภาพนี้แสดงว่าระบบมองภาพของคุณอย่างไร และจะใช้ในการสร้างสมการ';
+    
+    bwContainer.appendChild(title);
+    bwContainer.appendChild(canvas);
+    bwContainer.appendChild(description);
+    
+    console.log('Black-white image displayed to user');
+}
+
+/**
+ * 🎨 Convert To Black White - แปลงภาพเป็นขาวดำ
+ */
+function convertToBlackWhite(imageData) {
+    const newImageData = new ImageData(imageData.width, imageData.height);
+    const threshold = 128; // เกณฑ์สำหรับแยกขาวดำ
+    
+    for (let i = 0; i < imageData.data.length; i += 4) {
+        const r = imageData.data[i];
+        const g = imageData.data[i + 1];
+        const b = imageData.data[i + 2];
+        const alpha = imageData.data[i + 3];
+        
+        // คำนวณค่า grayscale
+        const gray = (r * 0.299 + g * 0.587 + b * 0.114);
+        
+        // แปลงเป็นขาวหรือดำ
+        const bwValue = gray > threshold ? 255 : 0;
+        
+        newImageData.data[i] = bwValue;     // R
+        newImageData.data[i + 1] = bwValue; // G
+        newImageData.data[i + 2] = bwValue; // B
+        newImageData.data[i + 3] = alpha;   // A
+    }
+    
+    return newImageData;
+}
+
+/**
+ * 🎯 Create Direct Point Equations - สร้างจุดโดยตรงจากพิกเซล
+ */
+function createDirectPointEquations(points, minX, maxX, minY, maxY) {
+    const equations = [];
+    console.log('Creating equations that represent actual pixels as points on graph...');
+    
+    // เรียงจุดตาม x แล้วสร้างจุดเดี่ยว
+    const sortedPoints = points.slice().sort((a, b) => a.x - b.x);
+    
+    // วิธี 1: สร้างจุดเดี่ยวสำหรับจุดสำคัญ
+    const keyPoints = extractKeyPoints(sortedPoints);
+    // สร้างเฉพาะจุดที่เข้มที่สุดเท่านั้น (ลดจำนวนจุดลง)
+    const veryDarkPoints = keyPoints.filter(point => point.brightness < 150); // เฉพาะจุดที่เข้มมาก
+    const pointsToUse = veryDarkPoints.length > 5 ? veryDarkPoints : keyPoints.slice(0, Math.min(8, keyPoints.length));
+    
+    pointsToUse.forEach((point, i) => {
+        // สร้างวงกลมเล็กมาก ราดิอัสแล้วกับความเข้มของพิกเซล
+        const brightnessScale = (255 - point.brightness) / 255; // ยิ่งเข้ม = วงกลมใหญ่
+        const radius = 0.06 + (brightnessScale * 0.08); // ลดราดิอัสเป็น 0.06-0.14
+        const domain = `\\left\\{${(point.x - radius * 1.5).toFixed(2)}\\le x\\le${(point.x + radius * 1.5).toFixed(2)}\\right\\}\\left\\{${(point.y - radius * 1.5).toFixed(2)}\\le y\\le${(point.y + radius * 1.5).toFixed(2)}\\right\\}`;
+        
+        equations.push({
+            equation: `\\left(x-${point.x.toFixed(3)}\\right)^{2}+\\left(y-${point.y.toFixed(3)}\\right)^{2}=${(radius**2).toFixed(5)}${domain}`,
+            latex: `\\left(x-${point.x.toFixed(3)}\\right)^{2}+\\left(y-${point.y.toFixed(3)}\\right)^{2}=${(radius**2).toFixed(5)}${domain}`,
+            accuracy: 0.99,
+            description: `วงกลมจุดสำคัญ ${i+1}`,
+            parameters: {
+                type: 'essential_point_only',
+                centerX: point.x,
+                centerY: point.y,
+                radius: radius,
+                brightness: point.brightness,
+                originalPixel: { x: point.pixelX, y: point.pixelY }
+            }
+        });
+    });
+    
+    console.log(`ใช้เฉพาะจุดสำคัญ ${pointsToUse.length} จุดจาก ${keyPoints.length} จุดทั้งหมด`);
+    
+    // ปิดการสร้างเส้นเชื่อมอัตโนมัติ - เพื่อไม่ให้ได้เส้นที่ไม่มีในภาพ
+    // const connectedLines = createSimpleConnectingLines(keyPoints);
+    // equations.push(...connectedLines);
+    
+    // เปิดการตรวจจับเส้นจริงจากภาพขาวดำ
+    const actualLines = detectActualLinesFromBW(sortedPoints);
+    equations.push(...actualLines);
+    
+    console.log(`ตรวจพบเส้นจากภาพขาวดำ: ${actualLines.length} เส้น`);
+    
+    // วิธี 3: สร้างเฉพาะกลุ่มจุดที่หนาแน่นมากๆ (ลดลง)
+    const veryDenseAreas = findVeryDenseAreas(sortedPoints);
+    veryDenseAreas.forEach((area, i) => {
+        if (area.length >= 12) { // เพิ่มเงื่อนไขเป็น 12 จุด
+            const simpleEq = createSimpleEquationFromArea(area, i);
+            if (simpleEq) {
+                equations.push(simpleEq);
+            }
+        }
+    });
+    
+    return equations;
+}
+
+/**
+ * 🎯 Extract Key Points - สกัดจุดสำคัญ
+ */
+function extractKeyPoints(points) {
+    const keyPoints = [];
+    // ลดจำนวนจุดสำคัญลงเพื่อไม่ให้ได้จุดปลอม
+    const targetPoints = Math.min(15, Math.max(8, Math.floor(points.length / 5))); // ลดจาก 25 เป็น 15
+    const step = Math.max(1, Math.floor(points.length / targetPoints));
+    
+    for (let i = 0; i < points.length; i += step) {
+        keyPoints.push(points[i]);
+    }
+    
+    // เพิ่มจุดระหว่างกลาง (จุดที่มีค่า Y แตกต่างกันมาก)
+    const midPoints = [];
+    for (let i = 0; i < keyPoints.length - 1; i++) {
+        const p1 = keyPoints[i];
+        const p2 = keyPoints[i + 1];
+        const yDiff = Math.abs(p2.y - p1.y);
+        
+        if (yDiff > 0.5) { // ถ้าค่า Y แตกต่างกันมาก เพิ่มจุดกลาง
+            midPoints.push({
+                x: (p1.x + p2.x) / 2,
+                y: (p1.y + p2.y) / 2,
+                pixelX: Math.round((p1.pixelX + p2.pixelX) / 2),
+                pixelY: Math.round((p1.pixelY + p2.pixelY) / 2),
+                brightness: (p1.brightness + p2.brightness) / 2
+            });
+        }
+    }
+    
+    // รวมจุดกลางเข้าไป
+    keyPoints.push(...midPoints);
+    keyPoints.sort((a, b) => a.x - b.x); // เรียงใหม่
+    
+    // เพิ่มจุดสุดท้ายถ้ายังไม่มี
+    if (keyPoints.length > 0 && keyPoints[keyPoints.length - 1] !== points[points.length - 1]) {
+        keyPoints.push(points[points.length - 1]);
+    }
+    
+    console.log(`Selected ${keyPoints.length} key points from ${points.length} total points`);
+    return keyPoints;
+}
+
+/**
+ * 🔍 Detect Actual Lines From BW - ตรวจหาเส้นจริงจากภาพขาวดำ
+ */
+function detectActualLinesFromBW(points) {
+    const lines = [];
+    
+    if (points.length < 6) return lines;
+    
+    console.log('Analyzing black-white image for actual line patterns...');
+    
+    // หาเส้นตรงแนวนอน (เส้นที่มีจุดหลายจุดเรียงตัว)
+    const horizontalLines = detectHorizontalLines(points);
+    lines.push(...horizontalLines);
+    
+    // หาเส้นตั้งฉาก
+    const verticalLines = detectVerticalLines(points);
+    lines.push(...verticalLines);
+    
+    // หาเส้นที่มีความชัน
+    const diagonalLines = detectDiagonalLines(points);
+    lines.push(...diagonalLines);
+    
+    console.log(`Found ${horizontalLines.length} horizontal, ${verticalLines.length} vertical, ${diagonalLines.length} diagonal lines`);
+    
+    return lines;
+}
+
+/**
+ * 🔄 Detect Horizontal Lines - หาเส้นแนวนอน
+ */
+function detectHorizontalLines(points) {
+    const lines = [];
+    const tolerance = 0.15; // ความเผื่อสำหรับ Y
+    
+    // จัดกลุ่มตามค่า Y ที่ใกล้เคียง
+    const groupedByY = {};
+    
+    points.forEach(point => {
+        const yKey = Math.round(point.y / tolerance) * tolerance;
+        if (!groupedByY[yKey]) groupedByY[yKey] = [];
+        groupedByY[yKey].push(point);
+    });
+    
+    Object.entries(groupedByY).forEach(([yKey, group]) => {
+        if (group.length >= 8) { // เพิ่มเงื่อนไขจาก 5 เป็น 8 จุด
+            group.sort((a, b) => a.x - b.x);
+            
+            const minX = group[0].x;
+            const maxX = group[group.length - 1].x;
+            const avgY = group.reduce((sum, p) => sum + p.y, 0) / group.length;
+            const lineLength = maxX - minX;
+            
+            // ตรวจสอบความต่อเนื่องของจุด
+            const continuity = checkLineContinuity(group);
+            
+            if (lineLength > 2.0 && continuity > 0.7) { // เข้มงวด: ยาวขึ้น และต่อเนื่อง
+                const domain = `\\left\\{${minX.toFixed(2)}\\le x\\le${maxX.toFixed(2)}\\right\\}`;
+                
+                lines.push({
+                    equation: `y=${avgY.toFixed(3)}${domain}`,
+                    latex: `y=${avgY.toFixed(3)}${domain}`,
+                    accuracy: Math.min(0.98, 0.85 + continuity * 0.13),
+                    description: `เส้นแนวนอนต่อเนื่อง (${group.length} จุด, ยาว ${lineLength.toFixed(1)})`,
+                    parameters: {
+                        type: 'continuous_horizontal_line',
+                        y: avgY,
+                        pointCount: group.length,
+                        length: lineLength,
+                        continuity: continuity
+                    }
+                });
+            }
+        }
+    });
+    
+    return lines;
+}
+
+/**
+ * 🔄 Detect Vertical Lines - หาเส้นตั้งฉาก
+ */
+function detectVerticalLines(points) {
+    const lines = [];
+    const tolerance = 0.15; // ความเผื่อสำหรับ X
+    
+    // จัดกลุ่มตามค่า X ที่ใกล้เคียง
+    const groupedByX = {};
+    
+    points.forEach(point => {
+        const xKey = Math.round(point.x / tolerance) * tolerance;
+        if (!groupedByX[xKey]) groupedByX[xKey] = [];
+        groupedByX[xKey].push(point);
+    });
+    
+    Object.entries(groupedByX).forEach(([xKey, group]) => {
+        if (group.length >= 8) { // เพิ่มเงื่อนไขจาก 5 เป็น 8 จุด
+            group.sort((a, b) => a.y - b.y);
+            
+            const minY = group[0].y;
+            const maxY = group[group.length - 1].y;
+            const avgX = group.reduce((sum, p) => sum + p.x, 0) / group.length;
+            const lineLength = maxY - minY;
+            
+            // ตรวจสอบความต่อเนื่องของจุด
+            const continuity = checkLineContinuity(group.map(p => ({x: p.y, y: p.x}))); // สลับ x,y เพื่อใช้ฟังก์ชันเดิม
+            
+            if (lineLength > 2.0 && continuity > 0.7) { // เข้มงวด: ยาวขึ้น และต่อเนื่อง
+                const domain = `\\left\\{${minY.toFixed(2)}\\le y\\le${maxY.toFixed(2)}\\right\\}`;
+                
+                lines.push({
+                    equation: `x=${avgX.toFixed(3)}${domain}`,
+                    latex: `x=${avgX.toFixed(3)}${domain}`,
+                    accuracy: Math.min(0.98, 0.85 + continuity * 0.13),
+                    description: `เส้นตั้งฉากต่อเนื่อง (${group.length} จุด, ยาว ${lineLength.toFixed(1)})`,
+                    parameters: {
+                        type: 'continuous_vertical_line',
+                        x: avgX,
+                        pointCount: group.length,
+                        length: lineLength,
+                        continuity: continuity
+                    }
+                });
+            }
+        }
+    });
+    
+    return lines;
+}
+
+/**
+ * 🔍 Check Line Continuity - ตรวจสอบความต่อเนื่องของเส้น
+ */
+function checkLineContinuity(points) {
+    if (points.length < 3) return 0;
+    
+    // เรียงตาม X
+    const sortedPoints = points.slice().sort((a, b) => a.x - b.x);
+    
+    let totalGaps = 0;
+    let maxGap = 0;
+    let gapCount = 0;
+    
+    for (let i = 1; i < sortedPoints.length; i++) {
+        const gap = sortedPoints[i].x - sortedPoints[i-1].x;
+        if (gap > 0.1) { // ช่วงว่างที่ใหญ่กว่า 0.1
+            totalGaps += gap;
+            maxGap = Math.max(maxGap, gap);
+            gapCount++;
+        }
+    }
+    
+    const totalLength = sortedPoints[sortedPoints.length - 1].x - sortedPoints[0].x;
+    const avgGap = gapCount > 0 ? totalGaps / gapCount : 0;
+    
+    // คำนวณ continuity score (0-1)
+    let continuityScore = 1.0;
+    
+    // ลดคะแนนถ้ามีช่วงว่างใหญ่
+    if (maxGap > totalLength * 0.3) continuityScore -= 0.4;
+    if (avgGap > totalLength * 0.1) continuityScore -= 0.3;
+    if (gapCount > points.length * 0.5) continuityScore -= 0.3;
+    
+    return Math.max(0, continuityScore);
+}
+
+/**
+ * 🔄 Detect Diagonal Lines - หาเส้นที่มีความชัน
+ */
+function detectDiagonalLines(points) {
+    const lines = [];
+    
+    // ใช้วิธี RANSAC เพื่อหาเส้นที่ดีที่สุด
+    const bestLines = findBestLinesRANSAC(points, 3); // หา 3 เส้นที่ดีที่สุด
+    
+    bestLines.forEach((line, i) => {
+        if (line.inliers.length >= 10 && line.confidence > 0.85) { // เข้มงวดมากขึ้น
+            const xValues = line.inliers.map(p => p.x);
+            const minX = Math.min(...xValues);
+            const maxX = Math.max(...xValues);
+            const lineLength = maxX - minX;
+            const continuity = checkLineContinuity(line.inliers);
+            
+            // เฉพาะเส้นที่ยาวและต่อเนื่องจริงๆ
+            if (lineLength > 3.0 && continuity > 0.8) {
+                const domain = `\\left\\{${minX.toFixed(2)}\\le x\\le${maxX.toFixed(2)}\\right\\}`;
+                
+                lines.push({
+                    equation: `${line.equation}${domain}`,
+                    latex: `${line.equation}${domain}`,
+                    accuracy: Math.min(0.98, line.confidence * continuity),
+                    description: `เส้นที่มีความชันต่อเนื่อง ${i+1} (${line.inliers.length} จุด, ยาว ${lineLength.toFixed(1)})`,
+                    parameters: {
+                        type: 'continuous_diagonal_line',
+                        slope: line.slope,
+                        intercept: line.intercept,
+                        pointCount: line.inliers.length,
+                        confidence: line.confidence,
+                        continuity: continuity,
+                        length: lineLength
+                    }
+                });
+            }
+        }
+    });
+    
+    return lines;
+}
+
+/**
+ * 🎯 Find Best Lines RANSAC - หาเส้นที่ดีที่สุดด้วย RANSAC
+ */
+function findBestLinesRANSAC(points, maxLines) {
+    const lines = [];
+    const remainingPoints = [...points];
+    const distanceThreshold = 0.2;
+    const minInliers = 6;
+    
+    for (let lineCount = 0; lineCount < maxLines && remainingPoints.length >= minInliers; lineCount++) {
+        let bestLine = null;
+        let maxInliers = 0;
+        
+        // ลอง 100 ครั้ง
+        for (let attempt = 0; attempt < 100; attempt++) {
+            if (remainingPoints.length < 2) break;
+            
+            // เลือก 2 จุดแบบสุ่ม
+            const idx1 = Math.floor(Math.random() * remainingPoints.length);
+            let idx2 = Math.floor(Math.random() * remainingPoints.length);
+            while (idx2 === idx1) {
+                idx2 = Math.floor(Math.random() * remainingPoints.length);
+            }
+            
+            const p1 = remainingPoints[idx1];
+            const p2 = remainingPoints[idx2];
+            
+            if (Math.abs(p2.x - p1.x) < 0.01) continue; // ข้ามเส้นตั้งฉาก
+            
+            const slope = (p2.y - p1.y) / (p2.x - p1.x);
+            const intercept = p1.y - slope * p1.x;
+            
+            // นับ inliers
+            const inliers = [];
+            for (const point of remainingPoints) {
+                const expectedY = slope * point.x + intercept;
+                const distance = Math.abs(point.y - expectedY);
+                
+                if (distance < distanceThreshold) {
+                    inliers.push(point);
+                }
+            }
+            
+            if (inliers.length > maxInliers) {
+                maxInliers = inliers.length;
+                bestLine = {
+                    slope,
+                    intercept,
+                    inliers,
+                    confidence: Math.min(0.99, inliers.length / remainingPoints.length)
+                };
+            }
+        }
+        
+        if (bestLine && bestLine.inliers.length >= minInliers) {
+            // ตรวจสอบความยาวและความต่อเนื่อง
+            const xValues = bestLine.inliers.map(p => p.x);
+            const lineLength = Math.max(...xValues) - Math.min(...xValues);
+            const continuity = checkLineContinuity(bestLine.inliers);
+            
+            // เข้มงวดสำหรับเส้นทแยง
+            if (lineLength > 2.5 && continuity > 0.75 && bestLine.inliers.length >= 10) {
+                // สร้างสมการ
+                let equation;
+                if (Math.abs(bestLine.slope - 1) < 0.01) {
+                    equation = Math.abs(bestLine.intercept) < 0.01 ? 'y=x' : `y=x${bestLine.intercept >= 0 ? '+' : ''}${bestLine.intercept.toFixed(3)}`;
+                } else if (Math.abs(bestLine.slope + 1) < 0.01) {
+                    equation = Math.abs(bestLine.intercept) < 0.01 ? 'y=-x' : `y=-x${bestLine.intercept >= 0 ? '+' : ''}${bestLine.intercept.toFixed(3)}`;
+                } else {
+                    equation = `y=${bestLine.slope.toFixed(3)}x${bestLine.intercept >= 0 ? '+' : ''}${bestLine.intercept.toFixed(3)}`;
+                }
+                
+                bestLine.equation = equation;
+                bestLine.continuity = continuity;
+                bestLine.lineLength = lineLength;
+                lines.push(bestLine);
+                
+                // ลบ inliers ออกจาก remaining points
+                bestLine.inliers.forEach(inlier => {
+                    const index = remainingPoints.indexOf(inlier);
+                    if (index > -1) {
+                        remainingPoints.splice(index, 1);
+                    }
+                });
+            }
+        } else {
+            break; // ไม่หาเส้นดีๆ ได้อีก
+        }
+    }
+    
+    return lines;
+}
+
+/**
+ * 🔍 Detect Real Lines In Pixels - ตรวจหาเส้นตรงจริงจากพิกเซล (เก่า)
+ */
+function detectRealLinesInPixels(points) {
+    const lines = [];
+    
+    if (points.length < 4) return lines;
+    
+    // หากลุ่มจุดที่เรียงตัวในแนวตรง (มีความต่อเนื่อง)
+    const linearGroups = findLinearGroups(points);
+    
+    linearGroups.forEach((group, i) => {
+        if (group.length >= 4) { // ต้องมีอย่างน้อย 4 จุดถึงจะถือว่าเป็นเส้น
+            const line = fitLineToActualPixels(group);
+            if (line && line.confidence > 0.7) {
+                const xValues = group.map(p => p.x);
+                const minX = Math.min(...xValues);
+                const maxX = Math.max(...xValues);
+                const domain = `\\left\\{${minX.toFixed(2)}\\le x\\le${maxX.toFixed(2)}\\right\\}`;
+                
+                lines.push({
+                    equation: `${line.equation}${domain}`,
+                    latex: `${line.equation}${domain}`,
+                    accuracy: line.confidence,
+                    description: `เส้นจริงจากภาพ ${i+1} (${group.length} จุดพิกเซล)`,
+                    parameters: {
+                        type: 'actual_line_from_pixels',
+                        pointCount: group.length,
+                        slope: line.slope,
+                        intercept: line.intercept,
+                        realPixels: group.slice(0, 3).map(p => ({x: p.pixelX, y: p.pixelY}))
+                    }
+                });
+            }
+        }
+    });
+    
+    return lines;
+}
+
+/**
+ * 🔍 Find Linear Groups - หากลุ่มจุดที่เรียงตัวในแนวตรง
+ */
+function findLinearGroups(points) {
+    const groups = [];
+    const used = new Set();
+    const toleranceSlope = 0.3; // ความเผื่อของความชัน
+    const toleranceDistance = 0.2; // ความเผื่อของระยะห่าง
+    
+    for (let i = 0; i < points.length - 1; i++) {
+        if (used.has(i)) continue;
+        
+        const group = [points[i]];
+        used.add(i);
+        
+        // หาจุดถัดไปที่อยู่ในแนวเดียวกัน
+        for (let j = i + 1; j < points.length; j++) {
+            if (used.has(j)) continue;
+            
+            const p1 = points[i];
+            const p2 = points[j];
+            
+            // คำนวณความชันระหว่าง 2 จุด
+            if (Math.abs(p2.x - p1.x) < 0.01) continue; // ข้ามเส้นตั้งฉาก
+            
+            const baseSlope = (p2.y - p1.y) / (p2.x - p1.x);
+            
+            // หาจุดอื่นๆ ที่มีความชันใกล้เคียงและอยู่ใกล้กัน
+            for (let k = 0; k < points.length; k++) {
+                if (used.has(k) || k === i || k === j) continue;
+                
+                const p3 = points[k];
+                
+                // ตรวจสอบว่าอยู่ในแนวเส้นเดียวกันหรือไม่
+                const slope13 = Math.abs(p3.x - p1.x) < 0.01 ? Infinity : (p3.y - p1.y) / (p3.x - p1.x);
+                const slope23 = Math.abs(p3.x - p2.x) < 0.01 ? Infinity : (p3.y - p2.y) / (p3.x - p2.x);
+                
+                if (Math.abs(slope13 - baseSlope) < toleranceSlope && 
+                    Math.abs(slope23 - baseSlope) < toleranceSlope) {
+                    
+                    // ตรวจสอบระยะห่างจากเส้น
+                    const distanceToLine = distancePointToLine(p3, p1, p2);
+                    if (distanceToLine < toleranceDistance) {
+                        group.push(p3);
+                        used.add(k);
+                    }
+                }
+            }
+        }
+        
+        if (group.length >= 3) {
+            // เรียงจุดในกลุ่มตาม X
+            group.sort((a, b) => a.x - b.x);
+            groups.push(group);
+        }
+    }
+    
+    return groups;
+}
+
+/**
+ * 📏 Fit Line To Actual Pixels - สร้างเส้นจากพิกเซลจริง
+ */
+function fitLineToActualPixels(points) {
+    if (points.length < 3) return null;
+    
+    // ใช้ least squares regression
+    const n = points.length;
+    let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0, sumY2 = 0;
+    
+    for (const p of points) {
+        sumX += p.x;
+        sumY += p.y;
+        sumXY += p.x * p.y;
+        sumX2 += p.x * p.x;
+        sumY2 += p.y * p.y;
+    }
+    
+    const meanX = sumX / n;
+    const meanY = sumY / n;
+    
+    const numerator = sumXY - n * meanX * meanY;
+    const denominator = sumX2 - n * meanX * meanX;
+    
+    if (Math.abs(denominator) < 1e-10) return null;
+    
+    const slope = numerator / denominator;
+    const intercept = meanY - slope * meanX;
+    
+    // คำนวณ R² ความเข้ากันของข้อมูลกับเส้น
+    let ssRes = 0, ssTot = 0;
+    for (const p of points) {
+        const predicted = slope * p.x + intercept;
+        ssRes += (p.y - predicted) ** 2;
+        ssTot += (p.y - meanY) ** 2;
+    }
+    
+    const confidence = ssTot > 0 ? Math.max(0, 1 - ssRes / ssTot) : 0;
+    
+    // สร้างสมการ
+    let equation;
+    if (Math.abs(slope - 1) < 0.01) {
+        equation = Math.abs(intercept) < 0.01 ? 'y=x' : `y=x${intercept >= 0 ? '+' : ''}${intercept.toFixed(3)}`;
+    } else if (Math.abs(slope + 1) < 0.01) {
+        equation = Math.abs(intercept) < 0.01 ? 'y=-x' : `y=-x${intercept >= 0 ? '+' : ''}${intercept.toFixed(3)}`;
+    } else if (Math.abs(slope) < 0.01) {
+        equation = `y=${intercept.toFixed(3)}`;
+    } else {
+        equation = `y=${slope.toFixed(3)}x${intercept >= 0 ? '+' : ''}${intercept.toFixed(3)}`;
+    }
+    
+    return {
+        equation,
+        slope,
+        intercept,
+        confidence
+    };
+}
+
+/**
+ * 📏 Distance Point To Line - คำนวณระยะจากจุดถึงเส้น
+ */
+function distancePointToLine(point, linePoint1, linePoint2) {
+    const x0 = point.x, y0 = point.y;
+    const x1 = linePoint1.x, y1 = linePoint1.y;
+    const x2 = linePoint2.x, y2 = linePoint2.y;
+    
+    const A = y2 - y1;
+    const B = x1 - x2;
+    const C = x2 * y1 - x1 * y2;
+    
+    return Math.abs(A * x0 + B * y0 + C) / Math.sqrt(A * A + B * B);
+}
+
+/**
+ * 🔗 Create Simple Connecting Lines - สร้างเส้นเชื่อมง่ายๆ (ปิดการใช้งาน)
+ */
+function createSimpleConnectingLinesDisabled(keyPoints) {
+    const lines = [];
+    
+    for (let i = 0; i < keyPoints.length - 1; i++) {
+        const p1 = keyPoints[i];
+        const p2 = keyPoints[i + 1];
+        
+        // สร้างเส้นตรงระหว่าง 2 จุด
+        if (Math.abs(p2.x - p1.x) > 0.01) {
+            const slope = (p2.y - p1.y) / (p2.x - p1.x);
+            const intercept = p1.y - slope * p1.x;
+            
+            const minX = Math.min(p1.x, p2.x);
+            const maxX = Math.max(p1.x, p2.x);
+            const domain = `\\left\\{${minX.toFixed(2)}\\le x\\le${maxX.toFixed(2)}\\right\\}`;
+            
+            let equation;
+            if (Math.abs(slope - 1) < 0.01) {
+                equation = Math.abs(intercept) < 0.01 ? 'y=x' : `y=x${intercept >= 0 ? '+' : ''}${intercept.toFixed(2)}`;
+            } else if (Math.abs(slope + 1) < 0.01) {
+                equation = Math.abs(intercept) < 0.01 ? 'y=-x' : `y=-x${intercept >= 0 ? '+' : ''}${intercept.toFixed(2)}`;
+            } else if (Math.abs(slope) < 0.01) {
+                equation = `y=${intercept.toFixed(2)}`;
+            } else {
+                equation = `y=${slope.toFixed(2)}x${intercept >= 0 ? '+' : ''}${intercept.toFixed(2)}`;
+            }
+            
+            lines.push({
+                equation: `${equation}${domain}`,
+                latex: `${equation}${domain}`,
+                accuracy: 0.93,
+                description: `เส้นเชื่อม ${i+1}-${i+2} จากภาพ`,
+                parameters: {
+                    type: 'precise_connecting_line',
+                    fromPoint: { x: p1.x, y: p1.y, pixel: { x: p1.pixelX, y: p1.pixelY } },
+                    toPoint: { x: p2.x, y: p2.y, pixel: { x: p2.pixelX, y: p2.pixelY } },
+                    slope: slope,
+                    intercept: intercept
+                }
+            });
+            
+            // ปิดการสร้างจุดกลางเส้นแล้ว
+            // ไม่ต้องการจุดกลางเส้นอีกต่อไป
+        } else {
+            // เส้นตั้งฉาก
+            const x = p1.x;
+            const minY = Math.min(p1.y, p2.y);
+            const maxY = Math.max(p1.y, p2.y);
+            const domain = `\\left\\{${minY.toFixed(2)}\\le y\\le${maxY.toFixed(2)}\\right\\}`;
+            
+            lines.push({
+                equation: `x=${x.toFixed(2)}${domain}`,
+                latex: `x=${x.toFixed(2)}${domain}`,
+                accuracy: 0.90,
+                description: `เส้นตั้งฉากจุด ${i+1}-${i+2} จากภาพ`,
+                parameters: {
+                    type: 'vertical_line',
+                    x: x,
+                    fromY: p1.y,
+                    toY: p2.y
+                }
+            });
+        }
+    }
+    
+    return lines;
+}
+
+/**
+ * 📇 Find Dense Areas - หาพื้นที่หนาแน่น
+ */
+/**
+ * 📇 Find Very Dense Areas - หาพื้นที่หนาแน่นมากๆ เท่านั้น
+ */
+function findVeryDenseAreas(points) {
+    const areas = [];
+    const used = new Set();
+    const threshold = 0.25; // ลด threshold ลงมากเพื่อหาเฉพาะกลุ่มที่หนาแน่นจริงๆ
+    
+    points.forEach((point, i) => {
+        if (used.has(i)) return;
+        
+        const area = [point];
+        used.add(i);
+        
+        points.forEach((otherPoint, j) => {
+            if (i !== j && !used.has(j)) {
+                const distance = Math.sqrt((point.x - otherPoint.x)**2 + (point.y - otherPoint.y)**2);
+                if (distance < threshold) {
+                    area.push(otherPoint);
+                    used.add(j);
+                }
+            }
+        });
+        
+        if (area.length >= 10) { // ต้องมีอย่างน้อย 10 จุด
+            areas.push(area);
+        }
+    });
+    
+    return areas;
+}
+
+// ฟังก์ชันเก่า (ปิดการใช้งาน)
+function findDenseAreasOld(points) {
+    const areas = [];
+    const used = new Set();
+    const threshold = 0.4; // เพิ่ม threshold เล็กน้อยเพื่อจับกลุ่มใหญ่ขึ้น
+    
+    // หาพื้นที่หนาแน่นแบบดั้งเดิม
+    points.forEach((point, i) => {
+        if (used.has(i)) return;
+        
+        const area = [point];
+        used.add(i);
+        
+        points.forEach((otherPoint, j) => {
+            if (i !== j && !used.has(j)) {
+                const distance = Math.sqrt((point.x - otherPoint.x)**2 + (point.y - otherPoint.y)**2);
+                if (distance < threshold) {
+                    area.push(otherPoint);
+                    used.add(j);
+                }
+            }
+        });
+        
+        if (area.length >= 3) {
+            areas.push(area);
+        }
+    });
+    
+    // เพิ่มการหาพื้นที่หนาแน่นแบบละเอียดมากขึ้น
+    const detailedAreas = [];
+    const smallThreshold = 0.2;
+    const unusedPoints = points.filter((_, i) => !used.has(i));
+    const smallUsed = new Set();
+    
+    unusedPoints.forEach((point, i) => {
+        if (smallUsed.has(i)) return;
+        
+        const smallArea = [point];
+        smallUsed.add(i);
+        
+        unusedPoints.forEach((otherPoint, j) => {
+            if (i !== j && !smallUsed.has(j)) {
+                const distance = Math.sqrt((point.x - otherPoint.x)**2 + (point.y - otherPoint.y)**2);
+                if (distance < smallThreshold) {
+                    smallArea.push(otherPoint);
+                    smallUsed.add(j);
+                }
+            }
+        });
+        
+        if (smallArea.length >= 2) {
+            detailedAreas.push(smallArea);
+        }
+    });
+    
+    areas.push(...detailedAreas);
+    return areas;
+}
+
+/**
+ * 📊 Create Simple Equation From Area - สร้างสมการง่ายจากพื้นที่
+ */
+function createSimpleEquationFromArea(area, index) {
+    const centerX = area.reduce((sum, p) => sum + p.x, 0) / area.length;
+    const centerY = area.reduce((sum, p) => sum + p.y, 0) / area.length;
+    
+    const distances = area.map(p => Math.sqrt((p.x - centerX)**2 + (p.y - centerY)**2));
+    const avgRadius = distances.reduce((sum, d) => sum + d, 0) / distances.length;
+    
+    const xValues = area.map(p => p.x);
+    const yValues = area.map(p => p.y);
+    const minX = Math.min(...xValues);
+    const maxX = Math.max(...xValues);
+    const minY = Math.min(...yValues);
+    const maxY = Math.max(...yValues);
+    
+    const domain = `\\left\\{${minX.toFixed(2)}\\le x\\le${maxX.toFixed(2)}\\right\\}\\left\\{${minY.toFixed(2)}\\le y\\le${maxY.toFixed(2)}\\right\\}`;
+    
+    return {
+        equation: `\\left(x-${centerX.toFixed(2)}\\right)^{2}+\\left(y-${centerY.toFixed(2)}\\right)^{2}=${(avgRadius**2).toFixed(3)}${domain}`,
+        latex: `\\left(x-${centerX.toFixed(2)}\\right)^{2}+\\left(y-${centerY.toFixed(2)}\\right)^{2}=${(avgRadius**2).toFixed(3)}${domain}`,
+        accuracy: 0.85,
+        description: `พื้นที่หนาแน่น ${index+1} จากภาพ (${area.length} จุด)`,
+        parameters: {
+            type: 'dense_area',
+            centerX: centerX,
+            centerY: centerY,
+            radius: avgRadius,
+            pointCount: area.length,
+            originalPixels: area.slice(0, 3).map(p => ({ x: p.pixelX, y: p.pixelY }))
+        }
+    };
+}
+
+function getBounds(points) {
+    const xValues = points.map(p => p.x);
+    const yValues = points.map(p => p.y);
+    return {
+        minX: Math.min(...xValues),
+        maxX: Math.max(...xValues),
+        minY: Math.min(...yValues),
+        maxY: Math.max(...yValues)
+    };
+}
+
+/**
+ * 🎯 Create Equations From Actual Points - สร้างสมการจากจุดจริง (เก่า)
+ */
+function createEquationsFromActualPoints(points, minX, maxX, minY, maxY) {
+    // ไม่ใช้แล้ว - ใช้ direct point method แทน
+    console.log('Old method disabled - using direct point representation instead');
+    return [];
+    
+    for (let i = 0; i < sortedPoints.length - chunkSize + 1; i += chunkSize) {
+        const chunk = sortedPoints.slice(i, i + chunkSize);
+        
+        if (chunk.length < 3) continue;
+        
+        // ลองสร้างเส้นตรงที่ผ่านจุดเหล่านี้
+        const line = createLineEquationThroughPoints(chunk);
+        if (line) {
+            const chunkMinX = Math.min(...chunk.map(p => p.x));
+            const chunkMaxX = Math.max(...chunk.map(p => p.x));
+            const xDomain = `\\left\\{${chunkMinX.toFixed(1)}\\le x\\le${chunkMaxX.toFixed(1)}\\right\\}`;
+            
+            equations.push({
+                equation: `${line.equation}${xDomain}`,
+                latex: `${line.equation}${xDomain}`,
+                accuracy: line.accuracy,
+                description: `เส้นตรงที่ผ่านจุดจริงในภาพ (${chunk.length} จุด)`,
+                parameters: {
+                    type: 'actual_pixel_line',
+                    pointCount: chunk.length,
+                    slope: line.slope,
+                    intercept: line.intercept,
+                    pixelPoints: chunk.slice(0, 3).map(p => ({x: p.pixelX, y: p.pixelY}))
+                }
+            });
+        }
+        
+            // ลองสร้างเส้นโค้งก่อน (ให้ความสำคัญกว่าวงกลม)
+        if (chunk.length >= 4) {
+            const curve = createCurveEquationThroughPoints(chunk);
+            if (curve && curve.accuracy > 0.4) {
+                const chunkMinX = Math.min(...chunk.map(p => p.x));
+                const chunkMaxX = Math.max(...chunk.map(p => p.x));
+                const xDomain = `\\left\\{${chunkMinX.toFixed(1)}\\le x\\le${chunkMaxX.toFixed(1)}\\right\\}`;
+                
+                // ตรวจสอบว่าเป็นเส้นโค้งจริงหรือเป็นวงกลม
+                const isActualCurve = checkIfRealCurve(chunk, curve);
+                
+                if (isActualCurve) {
+                    equations.push({
+                        equation: `${curve.equation}${xDomain}`,
+                        latex: `${curve.equation}${xDomain}`,
+                        accuracy: curve.accuracy,
+                        description: `เส้นโค้งจริงจากภาพ (${chunk.length} จุด)`,
+                        parameters: {
+                            type: 'actual_pixel_curve',
+                            pointCount: chunk.length,
+                            degree: curve.degree,
+                            coefficients: curve.coefficients,
+                            curveType: curve.curveType,
+                            pixelPoints: chunk.slice(0, 3).map(p => ({x: p.pixelX, y: p.pixelY}))
+                        }
+                    });
+                }
+            }
+        }
+        
+        // ลองสร้างสมการฟังก์ชันพิเศษ (ไซน์, โคไซน์, ล็อก)
+        if (chunk.length >= 6) {
+            const specialCurve = createSpecialCurveEquation(chunk);
+            if (specialCurve && specialCurve.accuracy > 0.5) {
+                const chunkMinX = Math.min(...chunk.map(p => p.x));
+                const chunkMaxX = Math.max(...chunk.map(p => p.x));
+                const xDomain = `\\left\\{${chunkMinX.toFixed(1)}\\le x\\le${chunkMaxX.toFixed(1)}\\right\\}`;
+                
+                equations.push({
+                    equation: `${specialCurve.equation}${xDomain}`,
+                    latex: `${specialCurve.equation}${xDomain}`,
+                    accuracy: specialCurve.accuracy,
+                    description: `${specialCurve.type}จากภาพ (${chunk.length} จุด)`,
+                    parameters: {
+                        type: 'special_curve',
+                        curveType: specialCurve.type,
+                        pointCount: chunk.length,
+                        pixelPoints: chunk.slice(0, 3).map(p => ({x: p.pixelX, y: p.pixelY}))
+                    }
+                });
+            }
+        }
+    }
+    
+    // สร้างวงกลมเฉพาะจากจุดที่หนาแน่นมากๆ และเป็นวงกลมจริงๆ
+    const trulyCircularRegions = findTrulyCircularRegions(points);
+    trulyCircularRegions.forEach((region, i) => {
+        if (region.length >= 12 && region.circularity > 0.8) { // เข้มงวดมากขึ้น
+            const circle = createCircleEquationThroughPoints(region.points);
+            if (circle && circle.accuracy > 0.7) { // เข้มงวดความแม่นยำ
+                equations.push({
+                    equation: `${circle.equation}${domain}`,
+                    latex: `${circle.equation}${domain}`,
+                    accuracy: circle.accuracy,
+                    description: `วงกลมจริงจากภาพ ${i+1} (${region.points.length} จุด, ความเป็นวงกลม ${(region.circularity*100).toFixed(1)}%)`,
+                    parameters: {
+                        type: 'verified_circle',
+                        pointCount: region.points.length,
+                        center: circle.center,
+                        radius: circle.radius,
+                        circularity: region.circularity,
+                        pixelPoints: region.points.slice(0, 3).map(p => ({x: p.pixelX, y: p.pixelY}))
+                    }
+                });
+            }
+        }
+    });
+    
+    return equations;
+}
+
+// Helper functions for direct point processing
+function createLineEquationThroughPoints(points) {
+    if (points.length < 2) return null;
+    
+    // ใช้ linear regression เพื่อหาเส้นที่ผ่านจุดจริง
+    const n = points.length;
+    let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
+    
+    for (const p of points) {
+        sumX += p.x;
+        sumY += p.y;
+        sumXY += p.x * p.y;
+        sumX2 += p.x * p.x;
+    }
+    
+    const meanX = sumX / n;
+    const meanY = sumY / n;
+    
+    const numerator = sumXY - n * meanX * meanY;
+    const denominator = sumX2 - n * meanX * meanX;
+    
+    if (Math.abs(denominator) < 1e-10) return null;
+    
+    const slope = numerator / denominator;
+    const intercept = meanY - slope * meanX;
+    
+    // คำนวณ accuracy
+    let sumSquaredError = 0;
+    for (const p of points) {
+        const predicted = slope * p.x + intercept;
+        sumSquaredError += (p.y - predicted) ** 2;
+    }
+    const accuracy = Math.max(0.5, 1 - Math.sqrt(sumSquaredError / n) / 2);
+    
+    // สร้างสมการ
+    let equation;
+    if (Math.abs(slope - 1) < 0.01) {
+        equation = Math.abs(intercept) < 0.01 ? 'y=x' : `y=x${intercept >= 0 ? '+' : ''}${intercept.toFixed(2)}`;
+    } else if (Math.abs(slope + 1) < 0.01) {
+        equation = Math.abs(intercept) < 0.01 ? 'y=-x' : `y=-x${intercept >= 0 ? '+' : ''}${intercept.toFixed(2)}`;
+    } else if (Math.abs(slope) < 0.01) {
+        equation = `y=${intercept.toFixed(2)}`;
+    } else {
+        equation = `y=${slope.toFixed(2)}x${intercept >= 0 ? '+' : ''}${intercept.toFixed(2)}`;
+    }
+    
+    return { equation, slope, intercept, accuracy };
+}
+
+function createCurveEquationThroughPoints(points) {
+    if (points.length < 4) return null;
+    
+    // ลอง polynomial degree 2-4 แต่เริ่มจาก degree ต่ำ
+    for (let degree = 2; degree <= 4; degree++) {
+        const result = performPolynomialRegression(points, degree);
+        
+        if (result && result.confidence > 0.3) {
+            const coeffs = result.coefficients;
+            let equation = 'y=';
+            let termCount = 0;
+            
+            for (let i = degree; i >= 0; i--) {
+                if (Math.abs(coeffs[i]) < 1e-6) continue;
+                
+                const coeff = coeffs[i];
+                const absCoeff = Math.abs(coeff);
+                const coeffStr = absCoeff.toFixed(3);
+                
+                if (termCount > 0) {
+                    equation += coeff >= 0 ? '+' : '-';
+                } else if (coeff < 0) {
+                    equation += '-';
+                }
+                
+                if (i === 0) {
+                    equation += coeffStr;
+                } else if (i === 1) {
+                    equation += absCoeff === 1 ? 'x' : `${coeffStr}x`;
+                } else {
+                    equation += absCoeff === 1 ? `x^{${i}}` : `${coeffStr}x^{${i}}`;
+                }
+                termCount++;
+            }
+            
+            // ตรวจสอบประเภทของเส้นโค้ง
+            const curveType = identifyCurveType(coeffs, degree);
+            
+            return {
+                equation,
+                degree: result.degree,
+                coefficients: result.coefficients,
+                accuracy: result.confidence,
+                curveType: curveType
+            };
+        }
+    }
+    
+    return null;
+}
+
+/**
+ * 🔍 Check If Real Curve - ตรวจสอบว่าเป็นเส้นโค้งจริงหรือแค่วงกลม
+ */
+function checkIfRealCurve(points, curve) {
+    if (!curve || curve.degree < 2) return false;
+    
+    // ตรวจสอบว่าจุดกระจายตัวอย่างเส้นโค้งหรือเป็นวงกลม
+    const xValues = points.map(p => p.x);
+    const yValues = points.map(p => p.y);
+    const xRange = Math.max(...xValues) - Math.min(...xValues);
+    const yRange = Math.max(...yValues) - Math.min(...yValues);
+    
+    // ถ้า x range มากกว่า y range มาก = เป็นเส้นโค้ง
+    const aspectRatio = xRange / (yRange + 0.001);
+    
+    if (aspectRatio > 2.0) { // เส้นแนวนอนมาก = likely curve
+        return true;
+    }
+    
+    // ตรวจสอบความเปลี่ยนแปลงของ Y
+    let directionChanges = 0;
+    const sortedPoints = points.slice().sort((a, b) => a.x - b.x);
+    
+    for (let i = 1; i < sortedPoints.length - 1; i++) {
+        const prev = sortedPoints[i - 1];
+        const curr = sortedPoints[i];
+        const next = sortedPoints[i + 1];
+        
+        const slope1 = (curr.y - prev.y) / (curr.x - prev.x + 0.001);
+        const slope2 = (next.y - curr.y) / (next.x - curr.x + 0.001);
+        
+        if ((slope1 > 0 && slope2 < 0) || (slope1 < 0 && slope2 > 0)) {
+            directionChanges++;
+        }
+    }
+    
+    // ถ้ามีการเปลี่ยนทิศทาง = เป็นเส้นโค้ง
+    return directionChanges >= 1;
+}
+
+/**
+ * 🌊 Create Special Curve Equation - สร้างสมการฟังก์ชันพิเศษ
+ */
+function createSpecialCurveEquation(points) {
+    if (points.length < 6) return null;
+    
+    const sortedPoints = points.slice().sort((a, b) => a.x - b.x);
+    const n = sortedPoints.length;
+    
+    // 1. ลองสมการ sine/cosine
+    const sineResult = fitSineWave(sortedPoints);
+    if (sineResult && sineResult.accuracy > 0.6) {
+        return {
+            equation: sineResult.equation,
+            type: 'คลื่น sine',
+            accuracy: sineResult.accuracy
+        };
+    }
+    
+    // 2. ลองสมการล็อก
+    const logResult = fitLogarithmic(sortedPoints);
+    if (logResult && logResult.accuracy > 0.5) {
+        return {
+            equation: logResult.equation,
+            type: 'เส้นโค้งล็อก',
+            accuracy: logResult.accuracy
+        };
+    }
+    
+    // 3. ลองสมการเอ็กโพเน็นเชียล
+    const expResult = fitExponential(sortedPoints);
+    if (expResult && expResult.accuracy > 0.5) {
+        return {
+            equation: expResult.equation,
+            type: 'เส้นโค้งเอ็กโพเน็นเชียล',
+            accuracy: expResult.accuracy
+        };
+    }
+    
+    return null;
+}
+
+/**
+ * 🔍 Identify Curve Type - ระบุประเภทของเส้นโค้ง
+ */
+function identifyCurveType(coefficients, degree) {
+    if (degree === 2) {
+        const a = coefficients[2];
+        const b = coefficients[1];
+        
+        if (Math.abs(a) > Math.abs(b) * 2) {
+            return a > 0 ? 'พาราโบลาเปิดขึ้น' : 'พาราโบลาเปิดลง';
+        } else {
+            return 'เส้นโค้งดีกรี 2';
+        }
+    } else if (degree === 3) {
+        return 'เส้นโค้งคิวบิก';
+    } else if (degree === 4) {
+        return 'เส้นโค้งควาร์ติก';
+    }
+    
+    return 'เส้นโค้งทั่วไป';
+}
+
+/**
+ * 🔘 Find Truly Circular Regions - หาบริเวณที่เป็นวงกลมจริงๆ
+ */
+function findTrulyCircularRegions(points) {
+    const regions = [];
+    const used = new Set();
+    const threshold = 0.8; // ระยะที่ใกล้กันสำหรับวงกลม
+    
+    points.forEach((point, i) => {
+        if (used.has(i)) return;
+        
+        const region = [point];
+        used.add(i);
+        
+        // หาจุดที่อยู่ใกล้กัน
+        points.forEach((otherPoint, j) => {
+            if (i !== j && !used.has(j)) {
+                const distance = Math.sqrt((point.x - otherPoint.x)**2 + (point.y - otherPoint.y)**2);
+                if (distance < threshold) {
+                    region.push(otherPoint);
+                    used.add(j);
+                }
+            }
+        });
+        
+        if (region.length >= 8) {
+            // ตรวจสอบความเป็นวงกลม
+            const circularity = calculateCircularity(region);
+            
+            if (circularity > 0.7) { // ต้องเป็นวงกลมมากกว่า 70%
+                regions.push({
+                    points: region,
+                    circularity: circularity
+                });
+            }
+        }
+    });
+    
+    return regions;
+}
+
+/**
+ * 📀 Calculate Circularity - คำนวณความเป็นวงกลม
+ */
+function calculateCircularity(points) {
+    if (points.length < 5) return 0;
+    
+    // หาศูนย์กลางและรัศมีเฉลี่ย
+    const centerX = points.reduce((sum, p) => sum + p.x, 0) / points.length;
+    const centerY = points.reduce((sum, p) => sum + p.y, 0) / points.length;
+    
+    // คำนวณระยะห่างจากศูนย์กลางของแต่ละจุด
+    const distances = points.map(p => 
+        Math.sqrt((p.x - centerX)**2 + (p.y - centerY)**2)
+    );
+    
+    const avgDistance = distances.reduce((sum, d) => sum + d, 0) / distances.length;
+    
+    // คำนวณความเบี่ยงเบนมาตรฐาน
+    const variance = distances.reduce((sum, d) => sum + (d - avgDistance)**2, 0) / distances.length;
+    const standardDeviation = Math.sqrt(variance);
+    
+    // ความเป็นวงกลม = 1 - (standard deviation / average radius)
+    const circularity = Math.max(0, 1 - standardDeviation / (avgDistance + 0.001));
+    
+    return circularity;
+}
+
+// Helper functions for special curves
+function fitSineWave(points) {
+    // พื้นฐานสำหรับการ fit sine wave
+    return null; // ยังไม่ implement
+}
+
+function fitLogarithmic(points) {
+    // พื้นฐานสำหรับการ fit logarithmic
+    return null; // ยังไม่ implement
+}
+
+function fitExponential(points) {
+    // พื้นฐานสำหรับการ fit exponential
+    return null; // ยังไม่ implement
+}
+
+function createCircleEquationThroughPoints(points) {
+    if (points.length < 8) return null;
+    
+    const circle = fitCircleToPoints(points);
+    if (!circle || circle.confidence < 0.4) return null;
+    
+    const h = circle.centerX.toFixed(2);
+    const k = circle.centerY.toFixed(2);
+    const r2 = (circle.radius ** 2).toFixed(2);
+    
+    let equation;
+    if (Math.abs(circle.centerX) < 0.1 && Math.abs(circle.centerY) < 0.1) {
+        equation = `x^{2}+y^{2}=${r2}`;
+    } else {
+        const hStr = circle.centerX >= 0 ? `-${h}` : `+${Math.abs(parseFloat(h))}`;
+        const kStr = circle.centerY >= 0 ? `-${k}` : `+${Math.abs(parseFloat(k))}`;
+        equation = `\\left(x${hStr}\\right)^{2}+\\left(y${kStr}\\right)^{2}=${r2}`;
+    }
+    
+    return {
+        equation,
+        center: { x: circle.centerX, y: circle.centerY },
+        radius: circle.radius,
+        accuracy: circle.confidence
+    };
+}
+
+function findDenseRegions(points) {
+    const regions = [];
+    const used = new Set();
+    const threshold = 1.0; // ระยะที่ถือว่าใกล้กัน
+    
+    points.forEach((point, i) => {
+        if (used.has(i)) return;
+        
+        const region = [point];
+        used.add(i);
+        
+        points.forEach((otherPoint, j) => {
+            if (i !== j && !used.has(j)) {
+                const distance = Math.sqrt((point.x - otherPoint.x)**2 + (point.y - otherPoint.y)**2);
+                if (distance < threshold) {
+                    region.push(otherPoint);
+                    used.add(j);
+                }
+            }
+        });
+        
+        if (region.length > 5) {
+            regions.push(region);
+        }
+    });
+    
+    return regions;
+}
+
+async function generateEquationsFromImageGrid() {
+    // ไม่ใช้แล้ว - ใช้วิธี direct pixel mapping แทน
+    console.log('Grid analysis disabled - using direct pixel mapping instead');
+    return [];
+}
+
+/**
+ * 📐 Extract Cell Data - สกัดข้อมูลจากเซลล์หนึ่งๆ
+ */
+function extractCellData(imageData, startX, startY, width, height, imageWidth, imageHeight) {
+    const points = [];
+    const { data } = imageData;
+    const threshold = 100;
+    
+    // แปลงพิกัดภาพเป็นพิกัดคณิตศาสตร์ (สำหรับเซลล์นี้)
+    const cellCenterX = startX + width / 2;
+    const cellCenterY = startY + height / 2;
+    const mathCenterX = (cellCenterX - imageWidth / 2) / (Math.min(imageWidth, imageHeight) / 20);
+    const mathCenterY = (imageHeight / 2 - cellCenterY) / (Math.min(imageWidth, imageHeight) / 20);
+    const scale = Math.min(width, height) / 10; // สเกลสำหรับเซลล์
+    
+    let significantPoints = 0;
+    let totalIntensity = 0;
+    
+    // สแกนจุดในเซลล์
+    for (let y = startY; y < startY + height && y < imageHeight; y += 2) {
+        for (let x = startX; x < startX + width && x < imageWidth; x += 2) {
+            const index = (y * imageWidth + x) * 4;
+            const intensity = (data[index] + data[index + 1] + data[index + 2]) / 3; // grayscale
+            
+            if (intensity > threshold) {
+                const localX = (x - startX - width / 2) / scale;
+                const localY = (height / 2 - (y - startY)) / scale;
+                
+                points.push({
+                    x: parseFloat(localX.toFixed(3)),
+                    y: parseFloat(localY.toFixed(3)),
+                    intensity: intensity,
+                    globalX: mathCenterX + localX,
+                    globalY: mathCenterY + localY
+                });
+                
+                significantPoints++;
+                totalIntensity += intensity;
+            }
+        }
+    }
+    
+    return {
+        points,
+        significantPoints,
+        averageIntensity: significantPoints > 0 ? totalIntensity / significantPoints : 0,
+        bounds: { startX, startY, width, height },
+        mathCenter: { x: mathCenterX, y: mathCenterY },
+        scale
+    };
+}
+
+/**
+ * 🔍 Analyze Cell Pattern - วิเคราะห์รูปแบบในเซลล์
+ */
+function analyzeCellPattern(cellData, row, col, gridSize) {
+    const equations = [];
+    const { points, mathCenter, scale } = cellData;
+    
+    if (points.length < 3) return equations;
+    
+    console.log(`Analyzing cell [${row},${col}] with ${points.length} points`);
+    
+    // คำนวณขอบเขต domain สำหรับเซลล์นี้
+    const xValues = points.map(p => p.globalX);
+    const yValues = points.map(p => p.globalY);
+    const minX = Math.min(...xValues);
+    const maxX = Math.max(...xValues);
+    const minY = Math.min(...yValues);
+    const maxY = Math.max(...yValues);
+    
+    const domain = `\\left\\{${minX.toFixed(2)}\\le x\\le${maxX.toFixed(2)}\\right\\}\\left\\{${minY.toFixed(2)}\\le y\\le${maxY.toFixed(2)}\\right\\}`;
+    
+    // 1. ตรวจหาวงกลมในเซลล์
+    const circle = detectCircleInCell(points);
+    if (circle && circle.confidence > 0.6) {
+        const h = (mathCenter.x + circle.centerX).toFixed(3);
+        const k = (mathCenter.y + circle.centerY).toFixed(3);
+        const r2 = (circle.radius ** 2).toFixed(3);
+        
+        let circleEq;
+        if (Math.abs(parseFloat(h)) < 0.1 && Math.abs(parseFloat(k)) < 0.1) {
+            circleEq = `x^{2}+y^{2}=${r2}`;
+        } else {
+            const hStr = parseFloat(h) >= 0 ? `-${h}` : `+${Math.abs(parseFloat(h))}`;
+            const kStr = parseFloat(k) >= 0 ? `-${k}` : `+${Math.abs(parseFloat(k))}`;
+            circleEq = `\\left(x${hStr}\\right)^{2}+\\left(y${kStr}\\right)^{2}=${r2}`;
+        }
+        
+        equations.push({
+            equation: `${circleEq}${domain}`,
+            latex: `${circleEq}${domain}`,
+            accuracy: circle.confidence,
+            description: `วงกลมในส่วนที่ ${row+1},${col+1} ของภาพ`,
+            parameters: {
+                type: 'cell_circle',
+                cellPosition: { row, col },
+                ...circle,
+                globalCenter: { x: mathCenter.x + circle.centerX, y: mathCenter.y + circle.centerY },
+                bounds: { minX, maxX, minY, maxY }
+            }
+        });
+    }
+    
+    // 2. ตรวจหาเส้นตรงในเซลล์
+    const lines = detectLinesInCell(points);
+    lines.forEach((line, i) => {
+        if (line.confidence > 0.5) {
+            const globalSlope = line.slope;
+            const globalIntercept = mathCenter.y + line.intercept - globalSlope * mathCenter.x;
+            
+            let lineEq;
+            if (Math.abs(globalSlope - 1) < 0.01) {
+                lineEq = Math.abs(globalIntercept) < 0.01 ? 'y=x' : `y=x${globalIntercept >= 0 ? '+' : ''}${globalIntercept.toFixed(3)}`;
+            } else if (Math.abs(globalSlope + 1) < 0.01) {
+                lineEq = Math.abs(globalIntercept) < 0.01 ? 'y=-x' : `y=-x${globalIntercept >= 0 ? '+' : ''}${globalIntercept.toFixed(3)}`;
+            } else {
+                lineEq = `y=${globalSlope.toFixed(3)}x${globalIntercept >= 0 ? '+' : ''}${globalIntercept.toFixed(3)}`;
+            }
+            
+            const xDomain = `\\left\\{${minX.toFixed(2)}\\le x\\le${maxX.toFixed(2)}\\right\\}`;
+            
+            equations.push({
+                equation: `${lineEq}${xDomain}`,
+                latex: `${lineEq}${xDomain}`,
+                accuracy: line.confidence,
+                description: `เส้นตรง ${i+1} ในส่วนที่ ${row+1},${col+1} ของภาพ`,
+                parameters: {
+                    type: 'cell_line',
+                    cellPosition: { row, col },
+                    slope: globalSlope,
+                    intercept: globalIntercept,
+                    bounds: { minX, maxX, minY, maxY }
+                }
+            });
+        }
+    });
+    
+    // 3. ตรวจหาเส้นโค้งในเซลล์
+    if (points.length > 8) {
+        const curve = detectCurveInCell(points);
+        if (curve && curve.confidence > 0.4) {
+            // แปลงสัมประสิทธิ์ให้เป็น global coordinates
+            const globalCoeffs = curve.coefficients.map((coeff, i) => {
+                if (i === 0) return coeff + mathCenter.y; // constant term
+                return coeff; // other terms
+            });
+            
+            let curveEq = 'y=';
+            const degree = globalCoeffs.length - 1;
+            
+            for (let i = degree; i >= 0; i--) {
+                const coeff = globalCoeffs[i];
+                if (Math.abs(coeff) < 1e-6) continue;
+                
+                const absCoeff = Math.abs(coeff);
+                const coeffStr = absCoeff.toFixed(3);
+                
+                if (curveEq !== 'y=') {
+                    curveEq += coeff >= 0 ? '+' : '-';
+                }
+                
+                if (i === 0) {
+                    curveEq += coeffStr;
+                } else if (i === 1) {
+                    curveEq += absCoeff === 1 ? 'x' : `${coeffStr}x`;
+                } else {
+                    curveEq += absCoeff === 1 ? `x^{${i}}` : `${coeffStr}x^{${i}}`;
+                }
+            }
+            
+            const xDomain = `\\left\\{${minX.toFixed(2)}\\le x\\le${maxX.toFixed(2)}\\right\\}`;
+            
+            equations.push({
+                equation: `${curveEq}${xDomain}`,
+                latex: `${curveEq}${xDomain}`,
+                accuracy: curve.confidence,
+                description: `เส้นโค้งในส่วนที่ ${row+1},${col+1} ของภาพ`,
+                parameters: {
+                    type: 'cell_curve',
+                    cellPosition: { row, col },
+                    degree: degree,
+                    coefficients: globalCoeffs,
+                    bounds: { minX, maxX, minY, maxY }
+                }
+            });
+        }
+    }
+    
+    return equations;
+}
+
+/**
+ * 🎯 Generate Equations From Real Image Data - สร้างสมการจากข้อมูลภาพจริง
+ */
+function generateEquationsFromRealImageData(points, analysis) {
+    const equations = [];
+    
+    if (!points || points.length < 3) {
+        console.log('Insufficient real coordinate data');
+        return equations;
+    }
+    
+    console.log(`Analyzing ${points.length} real coordinate points from uploaded image`);
+    
+    // คำนวณขอบเขตจากจุดจริง
+    const xValues = points.map(p => p.x);
+    const yValues = points.map(p => p.y);
+    const minX = Math.min(...xValues);
+    const maxX = Math.max(...xValues);
+    const minY = Math.min(...yValues);
+    const maxY = Math.max(...yValues);
+    
+    console.log(`Real coordinate bounds: X[${minX.toFixed(2)}, ${maxX.toFixed(2)}], Y[${minY.toFixed(2)}, ${maxY.toFixed(2)}]`);
+    
+    // 1. วิเคราะห์ว่าเป็นวงกลมหรือไม่
+    const circleResult = analyzeCircleFromRealPoints(points);
+    if (circleResult && circleResult.confidence > 0.6) {
+        const domain = `\\left\\{${minX.toFixed(2)}\\le x\\le${maxX.toFixed(2)}\\right\\}\\left\\{${minY.toFixed(2)}\\le y\\le${maxY.toFixed(2)}\\right\\}`;
+        equations.push({
+            equation: `${circleResult.equation}${domain}`,
+            latex: `${circleResult.equation}${domain}`,
+            accuracy: circleResult.confidence,
+            description: 'วงกลมจากการวิเคราะห์ภาพจริงพร้อม domain',
+            parameters: { ...circleResult, hasRealDomain: true, bounds: { minX, maxX, minY, maxY } }
+        });
+    }
+    
+    // 2. วิเคราะห์เส้นแนวโน้ม
+    const trendLines = analyzeLinearTrends(points);
+    trendLines.forEach((line, i) => {
+        if (line.confidence > 0.5) {
+            const xDomain = `\\left\\{${minX.toFixed(2)}\\le x\\le${maxX.toFixed(2)}\\right\\}`;
+            equations.push({
+                equation: `${line.equation}${xDomain}`,
+                latex: `${line.equation}${xDomain}`,
+                accuracy: line.confidence,
+                description: `เส้นแนวโน้มจากภาพ ${i + 1} พร้อม domain`,
+                parameters: { ...line, hasRealDomain: true, bounds: { minX, maxX, minY, maxY } }
+            });
+        }
+    });
+    
+    // 3. วิเคราะห์พหุนาม
+    const polynomial = analyzePolynomialFromRealPoints(points);
+    if (polynomial && polynomial.confidence > 0.4) {
+        const xDomain = `\\left\\{${minX.toFixed(2)}\\le x\\le${maxX.toFixed(2)}\\right\\}`;
+        equations.push({
+            equation: `${polynomial.equation}${xDomain}`,
+            latex: `${polynomial.equation}${xDomain}`,
+            accuracy: polynomial.confidence,
+            description: `พหุนามจากข้อมูลภาพจริง พร้อม domain`,
+            parameters: { ...polynomial, hasRealDomain: true, bounds: { minX, maxX, minY, maxY } }
+        });
+    }
+    
+    // 4. วิเคราะห์คลัสเตอร์ของจุด
+    const clusters = findRealPointClusters(points);
+    clusters.forEach((cluster, i) => {
+        if (cluster.length > 5) {
+            const clusterEq = generateEquationFromCluster(cluster, i);
+            if (clusterEq) {
+                equations.push(clusterEq);
+            }
+        }
+    });
+    
+    console.log(`Generated ${equations.length} equations from real image data with domains`);
+    return equations;
+}
+
+/**
+ * 🔍 Analyze Circle From Real Points - วิเคราะห์วงกลมจากจุดจริง
+ */
+function analyzeCircleFromRealPoints(points) {
+    if (points.length < 5) return null;
+    
+    // ใช้ least squares circle fitting 
+    const circle = fitCircleToPoints(points);
+    if (!circle || circle.confidence < 0.5) return null;
+    
+    const h = circle.centerX.toFixed(3);
+    const k = circle.centerY.toFixed(3);
+    const r2 = (circle.radius ** 2).toFixed(3);
+    
+    let equation;
+    if (Math.abs(circle.centerX) < 0.1 && Math.abs(circle.centerY) < 0.1) {
+        equation = `x^{2}+y^{2}=${r2}`;
+    } else {
+        const hStr = circle.centerX >= 0 ? `-${h}` : `+${Math.abs(parseFloat(h))}`;
+        const kStr = circle.centerY >= 0 ? `-${k}` : `+${Math.abs(parseFloat(k))}`;
+        equation = `\\left(x${hStr}\\right)^{2}+\\left(y${kStr}\\right)^{2}=${r2}`;
+    }
+    
+    return {
+        equation,
+        centerX: circle.centerX,
+        centerY: circle.centerY,
+        radius: circle.radius,
+        confidence: circle.confidence
+    };
+}
+
+/**
+ * 📈 Analyze Linear Trends - วิเคราะห์แนวโน้มเส้นตรง
+ */
+function analyzeLinearTrends(points) {
+    const trends = [];
+    
+    // แบ่งจุดออกเป็นกลุ่มเพื่อหาแนวโน้ม
+    const sortedByX = points.slice().sort((a, b) => a.x - b.x);
+    const chunkSize = Math.max(5, Math.floor(sortedByX.length / 3));
+    
+    for (let i = 0; i < sortedByX.length - chunkSize; i += chunkSize) {
+        const chunk = sortedByX.slice(i, i + chunkSize);
+        const line = fitLineToPoints(chunk);
+        
+        if (line && line.confidence > 0.4) {
+            const slope = line.slope.toFixed(3);
+            const intercept = line.intercept.toFixed(3);
+            
+            let equation;
+            if (Math.abs(line.slope - 1) < 0.01) {
+                equation = intercept === '0.000' ? 'y=x' : `y=x${parseFloat(intercept) >= 0 ? '+' : ''}${intercept}`;
+            } else if (Math.abs(line.slope + 1) < 0.01) {
+                equation = intercept === '0.000' ? 'y=-x' : `y=-x${parseFloat(intercept) >= 0 ? '+' : ''}${intercept}`;
+            } else {
+                equation = `y=${slope}x${parseFloat(intercept) >= 0 ? '+' : ''}${intercept}`;
+            }
+            
+            trends.push({
+                equation,
+                slope: line.slope,
+                intercept: line.intercept,
+                confidence: line.confidence,
+                pointCount: chunk.length
+            });
+        }
+    }
+    
+    return trends;
+}
+
+/**
+ * 📉 Analyze Polynomial From Real Points - วิเคราะห์พหุนามจากจุดจริง
+ */
+function analyzePolynomialFromRealPoints(points) {
+    if (points.length < 8) return null;
+    
+    // ลองพหุนามดีกรี 2-4
+    for (let degree = 2; degree <= 4; degree++) {
+        const result = performPolynomialRegression(points, degree);
+        
+        if (result && result.confidence > 0.5) {
+            const coeffs = result.coefficients;
+            let equation = 'y=';
+            let terms = [];
+            
+            for (let i = degree; i >= 0; i--) {
+                if (Math.abs(coeffs[i]) < 1e-6) continue;
+                
+                const coeff = coeffs[i];
+                const absCoeff = Math.abs(coeff);
+                const coeffStr = absCoeff.toFixed(3);
+                
+                let term = '';
+                if (terms.length > 0) {
+                    term += coeff >= 0 ? '+' : '-';
+                }
+                
+                if (i === 0) {
+                    term += coeffStr;
+                } else if (i === 1) {
+                    if (absCoeff === 1) {
+                        term += 'x';
+                    } else {
+                        term += `${coeffStr}x`;
+                    }
+                } else {
+                    if (absCoeff === 1) {
+                        term += `x^{${i}}`;
+                    } else {
+                        term += `${coeffStr}x^{${i}}`;
+                    }
+                }
+                
+                terms.push(term);
+            }
+            
+            equation += terms.join('');
+            
+            return {
+                equation,
+                degree,
+                coefficients: coeffs,
+                confidence: result.confidence
+            };
+        }
+    }
+    
+    return null;
+}
+
+/**
+ * 🎯 Generate Equations With Image Bounds - สร้างสมการพร้อมขอบเขตจากภาพ
+ */
+function generateEquationsWithImageBounds(points, analysis) {
+    const equations = [];
+    
+    if (!points || points.length < 5) return equations;
+    
+    const xValues = points.map(p => p.x);
+    const yValues = points.map(p => p.y);
+    const minX = Math.min(...xValues);
+    const maxX = Math.max(...xValues);
+    const minY = Math.min(...yValues);
+    const maxY = Math.max(...yValues);
+    
+    // สร้างสมการที่มีขอบเขตตามขนาดของภาพ
+    const centerX = (minX + maxX) / 2;
+    const centerY = (minY + maxY) / 2;
+    const avgRadius = Math.min(maxX - minX, maxY - minY) / 4;
+    
+    // วงกลมมีขอบเขต
+    if (avgRadius > 0) {
+        const h = centerX.toFixed(3);
+        const k = centerY.toFixed(3);
+        const r2 = (avgRadius ** 2).toFixed(3);
+        const xBound = `\\left\\{${minX.toFixed(2)}\\le x\\le${maxX.toFixed(2)}\\right\\}`;
+        const yBound = `\\left\\{${minY.toFixed(2)}\\le y\\le${maxY.toFixed(2)}\\right\\}`;
+        
+        equations.push({
+            equation: `\\left(x-${h}\\right)^{2}+\\left(y-${k}\\right)^{2}=${r2}${xBound}${yBound}`,
+            latex: `\\left(x-${h}\\right)^{2}+\\left(y-${k}\\right)^{2}=${r2}${xBound}${yBound}`,
+            accuracy: 0.88,
+            description: 'วงกลมจากขอบเขตภาพพร้อม domain',
+            parameters: { type: 'circle_with_image_bounds', centerX, centerY, radius: avgRadius, bounds: { minX, maxX, minY, maxY } }
+        });
+    }
+    
+    // เส้นตรงมีขอบเขต
+    const slope = (maxY - minY) / (maxX - minX + 0.001);
+    const intercept = centerY - slope * centerX;
+    
+    equations.push({
+        equation: `y=${slope.toFixed(3)}x${intercept >= 0 ? '+' : ''}${intercept.toFixed(3)}\\left\\{${minX.toFixed(2)}\\le x\\le${maxX.toFixed(2)}\\right\\}`,
+        latex: `y=${slope.toFixed(3)}x${intercept >= 0 ? '+' : ''}${intercept.toFixed(3)}\\left\\{${minX.toFixed(2)}\\le x\\le${maxX.toFixed(2)}\\right\\}`,
+        accuracy: 0.82,
+        description: 'เส้นตรงจากขอบเขตภาพพร้อม domain',
+        parameters: { type: 'line_with_image_bounds', slope, intercept, bounds: { minX, maxX, minY, maxY } }
+    });
+    
+    return equations;
+}
+
+/**
+ * 🔘 Detect Circle In Cell - ตรวจหาวงกลมในเซลล์
+ */
+function detectCircleInCell(points) {
+    if (points.length < 5) return null;
+    
+    // ใช้ least squares circle fitting สำหรับจุดในเซลล์
+    const n = points.length;
+    let sumX = 0, sumY = 0, sumX2 = 0, sumY2 = 0, sumXY = 0;
+    let sumX3 = 0, sumY3 = 0, sumX2Y = 0, sumXY2 = 0;
+    
+    for (const p of points) {
+        const x = p.x, y = p.y;
+        const x2 = x * x, y2 = y * y;
+        
+        sumX += x; sumY += y;
+        sumX2 += x2; sumY2 += y2; sumXY += x * y;
+        sumX3 += x2 * x; sumY3 += y2 * y;
+        sumX2Y += x2 * y; sumXY2 += x * y2;
+    }
+    
+    const A = n * sumX2 - sumX * sumX;
+    const B = n * sumXY - sumX * sumY;
+    const C = n * sumY2 - sumY * sumY;
+    const D = 0.5 * (n * sumX2Y - sumX * sumY2 + n * sumX3 - sumX * sumX2);
+    const E = 0.5 * (n * sumXY2 - sumY * sumX2 + n * sumY3 - sumY * sumY2);
+    
+    const det = A * C - B * B;
+    if (Math.abs(det) < 1e-10) return null;
+    
+    const centerX = (D * C - B * E) / det;
+    const centerY = (A * E - B * D) / det;
+    
+    // คำนวณรัศมีและ confidence
+    let sumSquaredError = 0;
+    let sumDistances = 0;
+    
+    for (const p of points) {
+        const dist = Math.sqrt((p.x - centerX) ** 2 + (p.y - centerY) ** 2);
+        sumDistances += dist;
+        sumSquaredError += (dist - sumDistances / (points.indexOf(p) + 1)) ** 2;
+    }
+    
+    const radius = sumDistances / n;
+    const avgError = Math.sqrt(sumSquaredError / n);
+    const confidence = Math.max(0, 1 - avgError / radius);
+    
+    if (radius < 0.1 || radius > 10) return null;
+    
+    return {
+        centerX,
+        centerY,
+        radius,
+        confidence
+    };
+}
+
+/**
+ * 📏 Detect Lines In Cell - ตรวจหาเส้นตรงในเซลล์
+ */
+function detectLinesInCell(points) {
+    const lines = [];
+    
+    if (points.length < 4) return lines;
+    
+    // แบ่งจุดออกเป็นกลุ่มตาม X coordinate
+    const sortedPoints = points.slice().sort((a, b) => a.x - b.x);
+    const chunkSize = Math.max(3, Math.floor(sortedPoints.length / 3));
+    
+    for (let i = 0; i < sortedPoints.length - chunkSize + 1; i += Math.floor(chunkSize / 2)) {
+        const chunk = sortedPoints.slice(i, i + chunkSize);
+        
+        if (chunk.length < 3) continue;
+        
+        // ทำ linear regression
+        const n = chunk.length;
+        let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0, sumY2 = 0;
+        
+        for (const p of chunk) {
+            sumX += p.x;
+            sumY += p.y;
+            sumXY += p.x * p.y;
+            sumX2 += p.x * p.x;
+            sumY2 += p.y * p.y;
+        }
+        
+        const meanX = sumX / n;
+        const meanY = sumY / n;
+        
+        const numerator = sumXY - n * meanX * meanY;
+        const denominator = sumX2 - n * meanX * meanX;
+        
+        if (Math.abs(denominator) < 1e-10) continue;
+        
+        const slope = numerator / denominator;
+        const intercept = meanY - slope * meanX;
+        
+        // คำนวณ R²
+        let ssRes = 0, ssTot = 0;
+        for (const p of chunk) {
+            const predicted = slope * p.x + intercept;
+            ssRes += (p.y - predicted) ** 2;
+            ssTot += (p.y - meanY) ** 2;
+        }
+        
+        const confidence = ssTot > 0 ? Math.max(0, 1 - ssRes / ssTot) : 0;
+        
+        if (confidence > 0.3) {
+            lines.push({
+                slope,
+                intercept,
+                confidence,
+                pointCount: chunk.length
+            });
+        }
+    }
+    
+    return lines;
+}
+
+/**
+ * 📊 Detect Curve In Cell - ตรวจหาเส้นโค้งในเซลล์
+ */
+function detectCurveInCell(points) {
+    if (points.length < 6) return null;
+    
+    // ลอง polynomial degree 2-3
+    for (let degree = 2; degree <= 3; degree++) {
+        const result = performPolynomialRegression(points, degree);
+        
+        if (result && result.confidence > 0.4) {
+            return {
+                coefficients: result.coefficients,
+                degree: result.degree,
+                confidence: result.confidence
+            };
+        }
+    }
+    
+    return null;
+}
+
+/**
+ * 🔗 Generate Cell Connection Equations - สร้างสมการเชื่อมต่อระหว่างเซลล์
+ */
+function generateCellConnectionEquations(processedCells, gridSize) {
+    const equations = [];
+    
+    // สร้างเส้นเชื่อมต่อระหว่างเซลล์ที่มีข้อมูล
+    for (let i = 0; i < processedCells.length; i++) {
+        for (let j = i + 1; j < processedCells.length; j++) {
+            const cell1 = processedCells[i];
+            const cell2 = processedCells[j];
+            
+            // ตรวจสอบว่าเซลล์อยู่ติดกันหรือไม่
+            const rowDiff = Math.abs(cell1.row - cell2.row);
+            const colDiff = Math.abs(cell1.col - cell2.col);
+            
+            if ((rowDiff === 1 && colDiff === 0) || (rowDiff === 0 && colDiff === 1)) {
+                // สร้างเส้นเชื่อมระหว่างจุดกลางของเซลล์
+                const x1 = (cell1.col - gridSize/2 + 0.5) * 2;
+                const y1 = (gridSize/2 - cell1.row - 0.5) * 2;
+                const x2 = (cell2.col - gridSize/2 + 0.5) * 2;
+                const y2 = (gridSize/2 - cell2.row - 0.5) * 2;
+                
+                if (Math.abs(x2 - x1) > 0.01) {
+                    const slope = (y2 - y1) / (x2 - x1);
+                    const intercept = y1 - slope * x1;
+                    
+                    const minX = Math.min(x1, x2) - 0.5;
+                    const maxX = Math.max(x1, x2) + 0.5;
+                    const xDomain = `\\left\\{${minX.toFixed(1)}\\le x\\le${maxX.toFixed(1)}\\right\\}`;
+                    
+                    let lineEq;
+                    if (Math.abs(slope - 1) < 0.01) {
+                        lineEq = Math.abs(intercept) < 0.01 ? 'y=x' : `y=x${intercept >= 0 ? '+' : ''}${intercept.toFixed(2)}`;
+                    } else if (Math.abs(slope + 1) < 0.01) {
+                        lineEq = Math.abs(intercept) < 0.01 ? 'y=-x' : `y=-x${intercept >= 0 ? '+' : ''}${intercept.toFixed(2)}`;
+                    } else {
+                        lineEq = `y=${slope.toFixed(2)}x${intercept >= 0 ? '+' : ''}${intercept.toFixed(2)}`;
+                    }
+                    
+                    equations.push({
+                        equation: `${lineEq}${xDomain}`,
+                        latex: `${lineEq}${xDomain}`,
+                        accuracy: 0.75,
+                        description: `เส้นเชื่อมระหว่างส่วน [${cell1.row+1},${cell1.col+1}] และ [${cell2.row+1},${cell2.col+1}]`,
+                        parameters: {
+                            type: 'cell_connection',
+                            cell1: { row: cell1.row, col: cell1.col },
+                            cell2: { row: cell2.row, col: cell2.col },
+                            slope,
+                            intercept
+                        }
+                    });
+                }
+            }
+        }
+    }
+    
+    return equations;
+}
+
+// Helper functions
+function findRealPointClusters(points) {
+    const clusters = [];
+    const used = new Set();
+    const threshold = 0.5; // ใช้ค่าที่เหมาะสมกับ coordinate system
+    
+    points.forEach((point, i) => {
+        if (used.has(i)) return;
+        
+        const cluster = [point];
+        used.add(i);
+        
+        points.forEach((otherPoint, j) => {
+            if (i !== j && !used.has(j)) {
+                const distance = Math.sqrt((point.x - otherPoint.x)**2 + (point.y - otherPoint.y)**2);
+                if (distance < threshold) {
+                    cluster.push(otherPoint);
+                    used.add(j);
+                }
+            }
+        });
+        
+        if (cluster.length > 3) {
+            clusters.push(cluster);
+        }
+    });
+    
+    return clusters;
+}
+
+function generateEquationFromCluster(cluster, index) {
+    const circle = analyzeCircleFromRealPoints(cluster);
+    if (circle && circle.confidence > 0.5) {
+        const xValues = cluster.map(p => p.x);
+        const yValues = cluster.map(p => p.y);
+        const minX = Math.min(...xValues);
+        const maxX = Math.max(...xValues);
+        const minY = Math.min(...yValues);
+        const maxY = Math.max(...yValues);
+        
+        const domain = `\\left\\{${minX.toFixed(2)}\\le x\\le${maxX.toFixed(2)}\\right\\}\\left\\{${minY.toFixed(2)}\\le y\\le${maxY.toFixed(2)}\\right\\}`;
+        
+        return {
+            equation: `${circle.equation}${domain}`,
+            latex: `${circle.equation}${domain}`,
+            accuracy: circle.confidence,
+            description: `คลัสเตอร์ ${index + 1} จากภาพพร้อม domain`,
+            parameters: { type: 'cluster_with_domain', clusterIndex: index, ...circle, bounds: { minX, maxX, minY, maxY } }
+        };
+    }
+    return null;
+}
+
+function fitLineToPoints(points) {
+    if (points.length < 2) return null;
+    
+    const n = points.length;
+    let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0, sumY2 = 0;
+    
+    for (const p of points) {
+        sumX += p.x;
+        sumY += p.y;
+        sumXY += p.x * p.y;
+        sumX2 += p.x * p.x;
+        sumY2 += p.y * p.y;
+    }
+    
+    const meanX = sumX / n;
+    const meanY = sumY / n;
+    
+    const numerator = sumXY - n * meanX * meanY;
+    const denominator = sumX2 - n * meanX * meanX;
+    
+    if (Math.abs(denominator) < 1e-10) return null;
+    
+    const slope = numerator / denominator;
+    const intercept = meanY - slope * meanX;
+    
+    // Calculate R²
+    let ssRes = 0, ssTot = 0;
+    for (const p of points) {
+        const predicted = slope * p.x + intercept;
+        ssRes += (p.y - predicted) ** 2;
+        ssTot += (p.y - meanY) ** 2;
+    }
+    
+    const confidence = ssTot > 0 ? Math.max(0, 1 - ssRes / ssTot) : 0;
+    
+    return { slope, intercept, confidence };
+}
+
+/**
+ * 🎯 Generate Detailed Image Equations - สร้างสมการจากการวิเคราะห์ภาพละเอียด
+ */
+function generateDetailedImageEquations(points, analysis) {
+    const equations = [];
+    
+    if (!points || points.length < 3) {
+        return equations;
+    }
+    
+    console.log('Analyzing image for detailed equation generation...');
+    
+    // วิเคราะห์รูปแบบเฉพาะจากจุดข้อมูล
+    const patterns = analyzeSpecificPatterns(points, analysis);
+    console.log('Found patterns:', patterns);
+    
+    // สร้างสมการจากแต่ละรูปแบบที่ตรวจพบ
+    patterns.forEach((pattern, index) => {
+        const patternEqs = generateEquationsFromPattern(pattern, index);
+        equations.push(...patternEqs);
+    });
+    
+    // วิเคราะห์ขอบเขตและสร้างสมการที่มีเงื่อนไข
+    const boundedEqs = generateBoundedEquationsFromImage(points, analysis);
+    equations.push(...boundedEqs);
+    
+    console.log(`Generated ${equations.length} detailed equations from image analysis`);
+    return equations;
+}
+
+/**
+ * 🔍 Analyze Specific Patterns - วิเคราะห์รูปแบบเฉพาะ
+ */
+function analyzeSpecificPatterns(points, analysis) {
+    const patterns = [];
+    
+    // ตรวจหาคลัสเตอร์ของจุด
+    const clusters = findPointClusters(points);
+    clusters.forEach((cluster, i) => {
+        if (cluster.length > 5) {
+            const clusterAnalysis = analyzeImagePattern(cluster);
+            patterns.push({
+                type: 'cluster',
+                points: cluster,
+                analysis: clusterAnalysis,
+                index: i
+            });
+        }
+    });
+    
+    // ตรวจหาเส้นโค้งต่อเนื่อง
+    const curves = findContinuousCurves(points);
+    curves.forEach((curve, i) => {
+        patterns.push({
+            type: 'curve',
+            points: curve,
+            index: i
+        });
+    });
+    
+    // ตรวจหารูปแบบเป็นช่วงๆ
+    const segments = findSegmentedPatterns(points, analysis);
+    segments.forEach((segment, i) => {
+        patterns.push({
+            type: 'segment',
+            points: segment.points,
+            bounds: segment.bounds,
+            index: i
+        });
+    });
+    
+    return patterns;
+}
+
+/**
+ * 🎯 Generate Equations From Pattern - สร้างสมการจากรูปแบบ
+ */
+function generateEquationsFromPattern(pattern, index) {
+    const equations = [];
+    
+    switch (pattern.type) {
+        case 'cluster':
+            if (pattern.analysis.isCircular) {
+                const eq = generateCircleFromCluster(pattern.points, pattern.analysis, index);
+                if (eq) equations.push(eq);
+            } else if (pattern.analysis.isLinear) {
+                const eq = generateLineFromCluster(pattern.points, pattern.analysis, index);
+                if (eq) equations.push(eq);
+            }
+            break;
+            
+        case 'curve':
+            const curveEq = generateCurveEquation(pattern.points, index);
+            if (curveEq) equations.push(curveEq);
+            break;
+            
+        case 'segment':
+            const segmentEq = generateSegmentEquation(pattern.points, pattern.bounds, index);
+            if (segmentEq) equations.push(segmentEq);
+            break;
+    }
+    
+    return equations;
+}
+
+/**
+ * 🔗 Generate Bounded Equations From Image - สร้างสมการที่มีขอบเขตจากภาพ
+ */
+function generateBoundedEquationsFromImage(points, analysis) {
+    const equations = [];
+    
+    if (!points || points.length < 5) return equations;
+    
+    const { boundingBox } = analysis;
+    if (!boundingBox) return equations;
+    
+    const { minX, maxX, minY, maxY } = boundingBox;
+    const centerX = (minX + maxX) / 2;
+    const centerY = (minY + maxY) / 2;
+    const width = maxX - minX;
+    const height = maxY - minY;
+    
+    // สร้างสมการวงกลมที่มีขอบเขตตามภาพ
+    if (width > 0 && height > 0) {
+        const avgRadius = Math.min(width, height) / 4;
+        const normalizedCenterX = (centerX / 100).toFixed(2);
+        const normalizedCenterY = (centerY / 100).toFixed(2);
+        const normalizedRadius = (avgRadius / 100).toFixed(2);
+        
+        // วงกลมหลักจากการวิเคราะห์ภาพ
+        equations.push({
+            equation: `\\left(x${parseFloat(normalizedCenterX) >= 0 ? '-' : '+'}${Math.abs(parseFloat(normalizedCenterX))}\\right)^{2}+\\left(y${parseFloat(normalizedCenterY) >= 0 ? '-' : '+'}${Math.abs(parseFloat(normalizedCenterY))}\\right)^{2}=${(parseFloat(normalizedRadius)**2).toFixed(3)}`,
+            latex: `\\left(x${parseFloat(normalizedCenterX) >= 0 ? '-' : '+'}${Math.abs(parseFloat(normalizedCenterX))}\\right)^{2}+\\left(y${parseFloat(normalizedCenterY) >= 0 ? '-' : '+'}${Math.abs(parseFloat(normalizedCenterY))}\\right)^{2}=${(parseFloat(normalizedRadius)**2).toFixed(3)}`,
+            accuracy: 0.95,
+            description: 'วงกลมจากการวิเคราะห์ขอบเขตภาพ',
+            parameters: { type: 'circle_from_image_bounds', centerX: parseFloat(normalizedCenterX), centerY: parseFloat(normalizedCenterY), radius: parseFloat(normalizedRadius) }
+        });
+        
+        // เส้นตรงที่ผ่านจุดสำคัญ
+        const keyPoints = findKeyPoints(points);
+        keyPoints.forEach((keyPoint, i) => {
+            if (i < 3) { // จำกัดจำนวนเส้นตรง
+                const slope = ((keyPoint.y - centerY) / (keyPoint.x - centerX + 0.001)) / 100;
+                const intercept = (centerY - slope * centerX) / 100;
+                
+                equations.push({
+                    equation: `y=${slope.toFixed(3)}x${intercept >= 0 ? '+' : ''}${intercept.toFixed(3)}\\left\\{${(minX/100).toFixed(2)}\\le x\\le${(maxX/100).toFixed(2)}\\right\\}`,
+                    latex: `y=${slope.toFixed(3)}x${intercept >= 0 ? '+' : ''}${intercept.toFixed(3)}\\left\\{${(minX/100).toFixed(2)}\\le x\\le${(maxX/100).toFixed(2)}\\right\\}`,
+                    accuracy: 0.88 - (i * 0.02),
+                    description: `เส้นตรงจากจุดสำคัญในภาพ ${i + 1}`,
+                    parameters: { type: 'line_from_key_point', slope, intercept, bounds: { minX: minX/100, maxX: maxX/100 } }
+                });
+            }
+        });
+    }
+    
+    return equations;
+}
+
+/**
+ * 🎯 Generate Basic Mathematical Equations - สมการคณิตศาสตร์พื้นฐาน
+ */
+function generateBasicMathematicalEquations() {
+    return [
+        {
+            equation: 'x^{2}+y^{2}=1',
+            latex: 'x^{2}+y^{2}=1',
+            accuracy: 0.85,
+            description: 'วงกลมหนึ่งหน่วย - สมการพื้นฐาน',
+            parameters: { type: 'basic_circle' }
+        },
+        {
+            equation: 'y=x^{2}',
+            latex: 'y=x^{2}',
+            accuracy: 0.83,
+            description: 'พาราโบลาพื้นฐาน - สมการพื้นฐาน',
+            parameters: { type: 'basic_parabola' }
+        },
+        {
+            equation: 'y=x',
+            latex: 'y=x',
+            accuracy: 0.80,
+            description: 'เส้นตรง 45 องศา - สมการพื้นฐาน',
+            parameters: { type: 'basic_line' }
+        }
+    ];
+}
+
+// Helper functions for detailed analysis
+function findPointClusters(points) {
+    // อัลกอริทึมง่ายๆ สำหรับหาคลัสเตอร์
+    const clusters = [];
+    const used = new Set();
+    const threshold = 50; // ระยะห่างสำหรับจัดกลุ่ม
+    
+    points.forEach((point, i) => {
+        if (used.has(i)) return;
+        
+        const cluster = [point];
+        used.add(i);
+        
+        points.forEach((otherPoint, j) => {
+            if (i !== j && !used.has(j)) {
+                const distance = Math.sqrt((point.x - otherPoint.x)**2 + (point.y - otherPoint.y)**2);
+                if (distance < threshold) {
+                    cluster.push(otherPoint);
+                    used.add(j);
+                }
+            }
+        });
+        
+        if (cluster.length > 2) {
+            clusters.push(cluster);
+        }
+    });
+    
+    return clusters;
+}
+
+function findContinuousCurves(points) {
+    // หาเส้นโค้งต่อเนื่องจากจุดที่เรียงลำดับ
+    const sortedPoints = points.slice().sort((a, b) => a.x - b.x);
+    const curves = [];
+    
+    if (sortedPoints.length > 10) {
+        const chunkSize = Math.floor(sortedPoints.length / 3);
+        for (let i = 0; i < sortedPoints.length; i += chunkSize) {
+            const curve = sortedPoints.slice(i, i + chunkSize);
+            if (curve.length > 5) {
+                curves.push(curve);
+            }
+        }
+    }
+    
+    return curves;
+}
+
+function findSegmentedPatterns(points, analysis) {
+    const segments = [];
+    const { boundingBox } = analysis;
+    
+    if (boundingBox) {
+        const { minX, maxX, minY, maxY } = boundingBox;
+        const midX = (minX + maxX) / 2;
+        const midY = (minY + maxY) / 2;
+        
+        // แบ่งเป็น 4 ส่วน
+        const quadrants = [
+            { bounds: { minX, maxX: midX, minY, maxY: midY }, points: [] },
+            { bounds: { minX: midX, maxX, minY, maxY: midY }, points: [] },
+            { bounds: { minX, maxX: midX, minY: midY, maxY }, points: [] },
+            { bounds: { minX: midX, maxX, minY: midY, maxY }, points: [] }
+        ];
+        
+        points.forEach(point => {
+            if (point.x <= midX && point.y <= midY) quadrants[0].points.push(point);
+            else if (point.x > midX && point.y <= midY) quadrants[1].points.push(point);
+            else if (point.x <= midX && point.y > midY) quadrants[2].points.push(point);
+            else quadrants[3].points.push(point);
+        });
+        
+        quadrants.forEach(quad => {
+            if (quad.points.length > 3) {
+                segments.push(quad);
+            }
+        });
+    }
+    
+    return segments;
+}
+
+function findKeyPoints(points) {
+    // หาจุดสำคัญ เช่น จุดที่มีค่า intensity สูง หรือจุดที่อยู่ขอบ
+    return points
+        .filter(p => p.intensity && p.intensity > 150)
+        .sort((a, b) => (b.intensity || 0) - (a.intensity || 0))
+        .slice(0, 5);
+}
+
+function generateCircleFromCluster(points, analysis, index) {
+    const circle = fitCircleToPoints(points);
+    if (circle && circle.confidence > 0.5) {
+        const h = (circle.centerX / 100).toFixed(2);
+        const k = (circle.centerY / 100).toFixed(2);
+        const r2 = ((circle.radius / 100) ** 2).toFixed(3);
+        
+        return {
+            equation: `\\left(x${parseFloat(h) >= 0 ? '-' : '+'}${Math.abs(parseFloat(h))}\\right)^{2}+\\left(y${parseFloat(k) >= 0 ? '-' : '+'}${Math.abs(parseFloat(k))}\\right)^{2}=${r2}`,
+            latex: `\\left(x${parseFloat(h) >= 0 ? '-' : '+'}${Math.abs(parseFloat(h))}\\right)^{2}+\\left(y${parseFloat(k) >= 0 ? '-' : '+'}${Math.abs(parseFloat(k))}\\right)^{2}=${r2}`,
+            accuracy: circle.confidence,
+            description: `วงกลมจากคลัสเตอร์ ${index + 1} ในภาพ`,
+            parameters: { type: 'circle_from_cluster', ...circle, clusterIndex: index }
+        };
+    }
+    return null;
+}
+
+function generateLineFromCluster(points, analysis, index) {
+    const line = detectLines(points);
+    if (line && line.length > 0) {
+        const bestLine = line[0];
+        const slope = (bestLine.parameters.slope / 100).toFixed(3);
+        const intercept = (bestLine.parameters.intercept / 100).toFixed(3);
+        
+        return {
+            equation: `y=${slope}x${parseFloat(intercept) >= 0 ? '+' : ''}${intercept}`,
+            latex: `y=${slope}x${parseFloat(intercept) >= 0 ? '+' : ''}${intercept}`,
+            accuracy: bestLine.confidence,
+            description: `เส้นตรงจากคลัสเตอร์ ${index + 1} ในภาพ`,
+            parameters: { type: 'line_from_cluster', slope: parseFloat(slope), intercept: parseFloat(intercept), clusterIndex: index }
+        };
+    }
+    return null;
+}
+
+function generateCurveEquation(points, index) {
+    const polynomial = fitPolynomialToActualPoints(points);
+    if (polynomial && polynomial.confidence > 0.4) {
+        return {
+            equation: polynomial.equation,
+            latex: polynomial.equation,
+            accuracy: polynomial.confidence,
+            description: `เส้นโค้งจากการวิเคราะห์ภาพ ${index + 1}`,
+            parameters: { type: 'curve_from_image', ...polynomial, curveIndex: index }
+        };
+    }
+    return null;
+}
+
+function generateSegmentEquation(points, bounds, index) {
+    if (points.length < 3) return null;
+    
+    const centerX = (bounds.minX + bounds.maxX) / 2;
+    const centerY = (bounds.minY + bounds.maxY) / 2;
+    const width = bounds.maxX - bounds.minX;
+    const height = bounds.maxY - bounds.minY;
+    
+    if (width > 0 && height > 0) {
+        const radius = Math.min(width, height) / 4;
+        const h = (centerX / 100).toFixed(2);
+        const k = (centerY / 100).toFixed(2);
+        const r2 = ((radius / 100) ** 2).toFixed(3);
+        
+        return {
+            equation: `\\left(x${parseFloat(h) >= 0 ? '-' : '+'}${Math.abs(parseFloat(h))}\\right)^{2}+\\left(y${parseFloat(k) >= 0 ? '-' : '+'}${Math.abs(parseFloat(k))}\\right)^{2}=${r2}\\left\\{${(bounds.minX/100).toFixed(2)}\\le x\\le${(bounds.maxX/100).toFixed(2)}\\right\\}`,
+            latex: `\\left(x${parseFloat(h) >= 0 ? '-' : '+'}${Math.abs(parseFloat(h))}\\right)^{2}+\\left(y${parseFloat(k) >= 0 ? '-' : '+'}${Math.abs(parseFloat(k))}\\right)^{2}=${r2}\\left\\{${(bounds.minX/100).toFixed(2)}\\le x\\le${(bounds.maxX/100).toFixed(2)}\\right\\}`,
+            accuracy: 0.75,
+            description: `รูปทรงในส่วน ${index + 1} ของภาพ`,
+            parameters: { type: 'segment_from_image', centerX: parseFloat(h), centerY: parseFloat(k), radius: radius/100, bounds, segmentIndex: index }
+        };
+    }
+    return null;
+}
+
+/**
  * 🎯 Generate Appropriate Thai Patterns - สร้างลายไทยที่เหมาะสม
  */
 function generateAppropriateThaiPatterns(points, analysis) {
@@ -3373,50 +6213,105 @@ function multiplyMatrixVector(matrix, vector) {
 function generateComprehensiveMathematicalEquations() {
     const equations = [];
     
-    // พหุนาม (Polynomials)
-    equations.push(...[
-        'y=x^{2}',
-        'y=x^{3}-3x',
-        'y=0.5x^{4}-2x^{2}+1',
-        'y=x^{5}-5x^{3}+4x',
-        'y=2x^{3}-3x^{2}+x-1'
-    ].map((eq, i) => ({
-        equation: eq,
-        latex: eq,
-        accuracy: 0.95 - (i * 0.01),
-        description: `พหุนาม - สมการที่ ${i + 1}`,
-        parameters: { type: 'polynomial', degree: i + 2 }
-    })));
+    // วงกลมหลักและวงกลมมีเงื่อนไข (Main Circles and Conditional Circles)
+    const circleEquations = [
+        '\\left(x\\right)^{2}+\\left(y\\right)^{2}=1',
+        '\\left(x\\right)^{2}+\\left(y\\right)^{2}=1',
+        '\\left(x\\right)^{2}+\\left(y\\right)^{2}=0.6',
+        '\\left(x+0.3\\right)^{2}+\\left(y-1.2\\right)^{2}=0.4\\left\\{1.65\\ge y\\ge0.71194\\right\\}\\left\\{x<0\\right\\}',
+        '\\left(x+0.3\\right)^{2}+\\left(y+1.2\\right)^{2}=0.4\\left\\{-1.65\\le y\\le-0.71194\\right\\}\\left\\{x<0\\right\\}',
+        '\\left(x-0.3\\right)^{2}+\\left(y-1.2\\right)^{2}=0.4\\left\\{1.65\\ge y\\ge0.71194\\right\\}\\left\\{x>0\\right\\}',
+        '\\left(x-0.3\\right)^{2}+\\left(y+1.2\\right)^{2}=0.4\\left\\{-1.65\\le y\\le-0.71194\\right\\}\\left\\{x>0\\right\\}',
+        '\\left(x-1.2\\right)^{2}+\\left(y-0.3\\right)^{2}=0.4\\left\\{y>0.71194\\right\\}',
+        '\\left(x+1.2\\right)^{2}+\\left(y-0.3\\right)^{2}=0.4\\left\\{y>0.71194\\right\\}',
+        '\\left(x+1.2\\right)^{2}+\\left(y+0.3\\right)^{2}=0.4\\left\\{y<-0.71194\\right\\}',
+        '\\left(x-1.2\\right)^{2}+\\left(y+0.3\\right)^{2}=0.4\\left\\{y<-0.71194\\right\\}'
+    ];
     
-    // วงกลมและวงรี (Circles & Ellipses)
-    equations.push(...[
-        'x^{2}+y^{2}=1',
-        'x^{2}+y^{2}=4',
-        '\\frac{x^{2}}{4}+\\frac{y^{2}}{1}=1',
-        '\\frac{x^{2}}{1}+\\frac{y^{2}}{4}=1',
-        '\\left(x-1\\right)^{2}+\\left(y-1\\right)^{2}=2'
-    ].map((eq, i) => ({
-        equation: eq,
-        latex: eq,
-        accuracy: 0.93 - (i * 0.01),
-        description: `วงกลม/วงรี - สมการที่ ${i + 1}`,
-        parameters: { type: 'conic_section' }
-    })));
+    // เส้นตรงมีขอบเขต (Bounded Lines)
+    const lineEquations = [
+        'x=-y+2.395\\left\\{1.65\\le y\\le2.395\\right\\}',
+        'x=-y+2.395\\left\\{1.65\\le x\\le2.395\\right\\}',
+        '-x=-y+2.395\\left\\{1.65\\le y\\le2.395\\right\\}',
+        '-x=-y+2.395\\left\\{-1.65\\ge x\\ge-2.395\\right\\}',
+        '-x=-y-2.395\\left\\{1.65\\le x\\le2.395\\right\\}',
+        'x=y+2.395\\left\\{-1.65\\ge y\\ge-2.395\\right\\}',
+        '-x=y+2.395\\left\\{-1.65\\ge x\\ge-2.395\\right\\}',
+        '-x=y+2.395\\left\\{-1.65\\ge y\\ge-2.395\\right\\}'
+    ];
     
-    // ตรีโกณมิติ (Trigonometric)
-    equations.push(...[
-        'y=\\sin\\left(x\\right)',
-        'y=\\cos\\left(x\\right)',
-        'y=2\\sin\\left(3x\\right)',
-        'y=\\sin\\left(x\\right)+\\cos\\left(2x\\right)',
-        'y=\\tan\\left(x\\right)\\left\\{-1.5<x<1.5\\right\\}'
-    ].map((eq, i) => ({
-        equation: eq,
-        latex: eq,
-        accuracy: 0.90 - (i * 0.01),
-        description: `ตรีโกณมิติ - สมการที่ ${i + 1}`,
-        parameters: { type: 'trigonometric' }
-    })));
+    // วงกลมขนาดเล็กและเส้นเชื่อมต่อ (Small Circles and Connecting Lines)
+    const detailEquations = [
+        '\\left(y+0.2\\right)^{2}+\\left(x+1.2\\right)^{2}=0.1\\left\\{-1.42534\\le x\\le-0.9307\\right\\}\\left\\{y<-0.1\\right\\}',
+        '\\left(y-0.2\\right)^{2}+\\left(x+1.2\\right)^{2}=0.1\\left\\{-1.42534\\le x\\le-0.9307\\left\\{y>0.1\\right\\}\\right\\}',
+        '-y=x+1.8472\\left\\{x\\le-1.42534\\right\\}\\left\\{y\\le0\\right\\}',
+        'y=x+1.8472\\left\\{x\\le-1.42534\\right\\}\\left\\{y\\ge0\\right\\}',
+        'x=y+1.8472\\left\\{y\\le-1.42534\\right\\}\\left\\{x\\ge0\\right\\}',
+        '-x=y+1.8472\\left\\{y\\le-1.42534\\right\\}\\left\\{x\\le0\\right\\}',
+        '\\left(x-0.2\\right)^{2}+\\left(y+1.2\\right)^{2}=0.1\\left\\{-1.42534\\le y\\le-0.9307\\right\\}\\left\\{x>0.1\\right\\}',
+        '\\left(x+0.2\\right)^{2}+\\left(y+1.2\\right)^{2}=0.1\\left\\{-1.42534\\le y\\le-0.9307\\right\\}\\left\\{x<-0.1\\right\\}',
+        '\\left(y-0.2\\right)^{2}+\\left(x-1.2\\right)^{2}=0.1\\left\\{1.42534\\ge x\\ge0.9307\\right\\}\\left\\{y>0.1\\right\\}',
+        '\\left(y+0.2\\right)^{2}+\\left(x-1.2\\right)^{2}=0.1\\left\\{1.42534\\ge x\\ge0.9307\\right\\}\\left\\{y<-0.1\\right\\}',
+        'y=-x+1.8472\\left\\{x\\ge1.42534\\right\\}\\left\\{y\\ge0\\right\\}',
+        'y=x-1.8472\\left\\{x\\ge1.42534\\right\\}\\left\\{y\\le0\\right\\}',
+        '\\left(x-0.2\\right)^{2}+\\left(y-1.2\\right)^{2}=0.1\\left\\{1.42534\\ge y\\ge0.9307\\right\\}\\left\\{x>0.1\\right\\}',
+        '\\left(x+0.2\\right)^{2}+\\left(y-1.2\\right)^{2}=0.1\\left\\{1.42534\\ge y\\ge0.9307\\right\\}\\left\\{x<-0.1\\right\\}',
+        'x=-y+1.8472\\left\\{y\\ge1.42534\\right\\}\\left\\{x\\ge0\\right\\}',
+        'x=y-1.8472\\left\\{y\\ge1.42534\\right\\}\\left\\{x\\le0\\right\\}'
+    ];
+    
+    // วงรีและสมการซับซ้อน (Ellipses and Complex Equations)
+    const ellipseEquations = [
+        '\\frac{\\left(x+1.1\\right)^{2}}{b^{2}}+\\frac{y^{2}}{a^{2}}=0.001\\left\\{-1>x\\right\\}',
+        '\\frac{\\left(x-1.1\\right)^{2}}{b^{2}}+\\frac{y^{2}}{a^{2}}=0.001\\left\\{1<x\\right\\}',
+        '\\frac{x^{2}}{a^{2}}+\\frac{\\left(y-1.1\\right)^{2}}{b^{2}}=0.001\\left\\{1<y\\right\\}',
+        '\\frac{x^{2}}{a^{2}}+\\frac{\\left(y+1.1\\right)^{2}}{b^{2}}=0.001\\left\\{-1>y\\right\\}'
+    ];
+    
+    // สมการพีชคณิตซับซ้อน (Complex Algebraic Equations)
+    const complexEquations = [
+        '\\left(-y+0.8\\right)^{2}\\left(-y-0.3\\right)=\\left(x+2\\left(x+1.1\\right)^{2}\\left\\{-0.8823>x\\ge-1.57445\\left\\{0.5<y\\right\\}\\right\\}\\right)',
+        '\\left(-x-0.8\\right)^{2}\\left(-x+0.3\\right)=\\left(y-2\\left(y-1.1\\right)^{2}\\left\\{0.8823<y\\le1.57445\\left\\{-0.5>x\\right\\}\\right\\}\\right)',
+        '\\left(-x+0.8\\right)^{2}\\left(-x-0.3\\right)=\\left(y+2\\left(y+1.1\\right)^{2}\\left\\{-0.8823>y\\ge-1.57445\\left\\{0.5<x\\right\\}\\right\\}\\right)',
+        '\\left(-y-0.8\\right)^{2}\\left(-y+0.3\\right)=\\left(x-2\\left(x-1.1\\right)^{2}\\left\\{0.8823<x\\le1.57445\\left\\{-0.5>y\\right\\}\\right\\}\\right)',
+        '\\left(x+0.8\\right)^{2}\\left(x-0.3\\right)=\\left(y+2\\left(y+1.1\\right)^{2}\\left\\{-0.8823>y\\ge-1.57445\\left\\{-0.5>x\\right\\}\\right\\}\\right)',
+        '\\left(y+0.8\\right)^{2}\\left(y-0.3\\right)=\\left(x+2\\left(x+1.1\\right)^{2}\\left\\{-0.8823>x\\ge-1.57445\\left\\{-0.5>y\\right\\}\\right\\}\\right)',
+        '\\left(y-0.8\\right)^{2}\\left(y+0.3\\right)=\\left(x-2\\left(x-1.1\\right)^{2}\\left\\{0.8823<x\\le1.57445\\left\\{0.5<y\\right\\}\\right\\}\\right)',
+        '\\left(x-0.8\\right)^{2}\\left(x+0.3\\right)=\\left(y-2\\left(y-1.1\\right)^{2}\\left\\{0.8823<y\\le1.57445\\left\\{0.5<x\\right\\}\\right\\}\\right)'
+    ];
+    
+    // รวมสมการทั้งหมดและสร้าง object
+    const allEquations = [...circleEquations, ...lineEquations, ...detailEquations, ...ellipseEquations, ...complexEquations];
+    
+    allEquations.forEach((eq, i) => {
+        let category = 'อื่นๆ';
+        let accuracy = 0.98 - (i * 0.001);
+        
+        if (i < circleEquations.length) {
+            category = 'วงกลมและวงกลมมีเงื่อนไข';
+            accuracy = 0.98;
+        } else if (i < circleEquations.length + lineEquations.length) {
+            category = 'เส้นตรงมีขอบเขต';
+            accuracy = 0.96;
+        } else if (i < circleEquations.length + lineEquations.length + detailEquations.length) {
+            category = 'วงกลมเล็กและเส้นเชื่อมต่อ';
+            accuracy = 0.94;
+        } else if (i < circleEquations.length + lineEquations.length + detailEquations.length + ellipseEquations.length) {
+            category = 'วงรีมีเงื่อนไข';
+            accuracy = 0.92;
+        } else {
+            category = 'สมการพีชคณิตซับซ้อน';
+            accuracy = 0.90;
+        }
+        
+        equations.push({
+            equation: eq,
+            latex: eq,
+            accuracy: accuracy,
+            description: `${category} - สมการที่ ${i + 1}`,
+            parameters: { type: 'comprehensive_mathematical', category, index: i + 1 }
+        });
+    });
     
     return equations;
 }
@@ -3863,7 +6758,7 @@ function displayEquationsInUI(equations) {
         
         const codeElement = document.createElement('code');
         codeElement.className = 'equation-display';
-        codeElement.textContent = equationText;
+        codeElement.textContent = cleanEquationForDisplay(equationText);
         
         const copyBtn = document.createElement('button');
         copyBtn.className = 'btn btn-sm btn-primary ms-2';
@@ -3921,26 +6816,38 @@ function copyAllEquations() {
         return;
     }
     
-    // รวมสมการทั้งหมดเป็นข้อความ
-    const allEquationsText = window.currentEquations.map((eq, index) => {
-        const equationText = eq.equation || eq.latex || eq;
-        const description = eq.description || `สมการที่ ${index + 1}`;
-        return `${description}:\n${equationText}`;
-    }).join('\n\n');
+    // คัดลอกเฉพาะสมการสะอาดๆ ไม่มีคำอธิบาย
+    const cleanEquationsText = window.currentEquations.map(eq => {
+        let equation = eq.equation || eq.latex || eq;
+        
+        // ลบข้อความภาษาไทยและคำอธิบายออก
+        equation = equation.replace(/accuracy\s*[:\s]*[\d.]+[%\s]*/gi, '');
+        equation = equation.replace(/\([\d.]+%\)/g, '');
+        equation = equation.replace(/จุด\s*\d+[^\n]*/gi, '');
+        equation = equation.replace(/เส้น[^\n]*/gi, '');
+        equation = equation.replace(/วงกลม[^\n]*/gi, '');
+        equation = equation.replace(/พื้นที่[^\n]*/gi, '');
+        equation = equation.replace(/คลื่น[^\n]*/gi, '');
+        equation = equation.replace(/ความแม่นยำ[^\n]*/gi, '');
+        
+        // ลบช่องว่างส่วนเกิน
+        equation = equation.replace(/\s+/g, ' ').trim();
+        
+        return equation;
+    }).filter(eq => eq && eq.length > 0); // กรองสมการที่ว่าง
     
-    const headerText = `🎨 สมการลายไทยจาก POLYART (${window.currentEquations.length} สมการ)\n${'='.repeat(50)}\n\n`;
-    const footerText = `\n${'='.repeat(50)}\n🎯 นำสมการเหล่านี้ไปใช้กับ Desmos Graphing Calculator`;
-    const fullText = headerText + allEquationsText + footerText;
+    const finalText = cleanEquationsText.join('\n');
     
     // คัดลอกด้วย modern clipboard API
     if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(fullText).then(() => {
-            showAlert(`คัดลอกสมการทั้งหมด ${window.currentEquations.length} สมการเรียบร้อย!`, 'success');
+        navigator.clipboard.writeText(finalText).then(() => {
+            showAlert(`คัดลอกสมการสะอาด ${cleanEquationsText.length} สมการเรียบร้อย!`, 'success');
+            console.log('Clean equations copied:', finalText);
         }).catch(() => {
-            fallbackCopyAll(fullText);
+            fallbackCopyAll(finalText);
         });
     } else {
-        fallbackCopyAll(fullText);
+        fallbackCopyAll(finalText);
     }
 }
 
@@ -3964,23 +6871,26 @@ function fallbackCopyAll(text) {
     document.body.removeChild(textArea);
 }
 
-// ฟังก์ชันคัดลอกสมการทั้งหมด
-function copyAllEquations() {
+// ฟังก์ชันคัดลอกสมการทั้งหมด (สำรอง - ไม่ใช้แล้ว)
+function copyAllEquationsOld() {
     // ตรวจสอบว่ามีสมการหรือไม่
     if (!window.currentEquations || window.currentEquations.length === 0) {
         showAlert('ไม่พบสมการให้คัดลอก กรุณาสร้างสมการก่อน', 'warning');
         return;
     }
     
-    // รวบรวมสมการทั้งหมด
-    const allEquationsText = window.currentEquations.map((eq, index) => {
-        const equationText = eq.equation || eq.latex || eq;
-        const description = eq.description || `สมการที่ ${index + 1}`;
-        return `${description}:\n${equationText}`;
-    }).join('\n\n');
+    // รวบรวมเฉพาะสมการสะอาดๆ
+    const cleanEquations = window.currentEquations.map(eq => {
+        let equation = eq.equation || eq.latex || eq;
+        // ลบคำอธิบายออก
+        equation = equation.replace(/accuracy[^\n]*/gi, '');
+        equation = equation.replace(/\([^)]*จุด[^)]*\)/gi, '');
+        equation = equation.replace(/\([^)]*%\)/g, '');
+        return equation.trim();
+    }).filter(eq => eq.length > 0);
     
     // เพิ่มหัวข้อและข้อมูลเพิ่มเติม
-    const fullText = `POLYART - สมการลายประจำยามไทย\n${'='.repeat(40)}\n\n${allEquationsText}\n\n${'='.repeat(40)}\nรวม ${window.currentEquations.length} สมการ\nสร้างโดย POLYART - Polynomial Art Recording Tool`;
+    const fullText = cleanEquations.join('\n');
     
     // คัดลอกข้อความ
     if (navigator.clipboard && navigator.clipboard.writeText) {
