@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <!-- 
-    🎯 Image to Polynomial Web App - ไฟล์ HTML หลัก
-    ========================================================
-    นี่คือแอปพลิเคชันเว็บที่ใช้แปลงภาพเป็นสมการพหุนาม
-    โดยใช้เทคนิค Computer Vision และ Machine Learning
+    � เครื่องมือสร้างกราฟสมการพหุนาม - ไฟล์ HTML หลัก
+    ===============================================================
+    แอปพลิเคชันเว็บสำหรับบันทึกลวดลายศิลปวัฒนธรรมไทยและนานาชาติ
+    โดยแปลงภาพเป็นสมการทางคณิตศาสตร์ เพื่อการเรียนรู้และอนุรักษ์
     
     📚 การเรียนรู้สำหรับนักเรียน:
     - HTML5 Structure และ Semantic Elements
@@ -20,7 +20,15 @@
     <!-- ทำให้เว็บไซต์ Responsive บนอุปกรณ์มือถือ -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <!-- ชื่อหน้าเว็บที่จะแสดงบน Browser Tab -->
-    <title>🎯 Image to Polynomial Web App</title>
+        <title>POLYART - Polynomial Art Recording Tool</title>
+    
+    <!-- 📝 Meta Tags สำหรับ SEO และ Social Media -->
+    <meta name="description" content="POLYART - Polynomial Art Recording Tool สำหรับบันทึกลวดลายศิลปวัฒนธรรมไทยและนานาชาติด้วยสมการคณิตศาสตร์">
+    <meta name="keywords" content="ศิลปะไทย, คณิตศาสตร์, สมการพหุนาม, ลวดลาย, วัฒนธรรม, การศึกษา, เครื่องมือวิเคราะห์ลวดลาย">
+    <meta name="author" content="Thai Art Mathematics Project">
+        <meta property="og:title" content="POLYART - Polynomial Art Recording Tool">
+    <meta property="og:description" content="แปลงลวดลายศิลปะไทยและนานาชาติเป็นสมการคณิตศาสตร์เพื่อการเรียนรู้และอนุรักษ์">
+    <meta property="og:type" content="website">
     
     <!-- 📦 External CSS Libraries -->
     <!-- Bootstrap CSS Framework - ใช้สำหรับ UI Components และ Grid System -->
@@ -43,9 +51,26 @@
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
         <div class="container">
             <!-- Logo และชื่อแอป -->
-            <a class="navbar-brand" href="#">
-                <i class="fas fa-chart-line me-2"></i>
-                Image to Polynomial
+            <a class="navbar-brand d-flex align-items-center" href="#">
+                <!-- POLYART Logo SVG -->
+                <svg width="40" height="25" viewBox="0 0 300 150" xmlns="http://www.w3.org/2000/svg" class="me-2">
+                    <defs>
+                        <linearGradient id="navCurveGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" style="stop-color:#ffffff;stop-opacity:1" />
+                            <stop offset="50%" style="stop-color:#e8f4fd;stop-opacity:1" />
+                            <stop offset="100%" style="stop-color:#ffffff;stop-opacity:1" />
+                        </linearGradient>
+                    </defs>
+                    <path d="M 30,120 Q 75,30 120,75 T 200,60 T 270,90" 
+                          stroke="url(#navCurveGradient)" 
+                          stroke-width="6" 
+                          fill="none" 
+                          stroke-linecap="round"/>
+                    <circle cx="30" cy="120" r="4" fill="white"/>
+                    <circle cx="120" cy="75" r="4" fill="white"/>
+                    <circle cx="270" cy="90" r="4" fill="white"/>
+                </svg>
+                POLYART
             </a>            <!-- ปุ่ม Hamburger Menu สำหรับมือถือ -->
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" title="เปิด/ปิดเมนู">
                 <span class="navbar-toggler-icon"></span>
@@ -82,13 +107,15 @@
                 <div class="col-lg-6">
                     <!-- หัวเรื่องหลัก -->
                     <h1 class="display-4 fw-bold mb-4 hero-title">
-                        🎯 แปลงภาพเป็นสมการพหุนาม
+                        🎨 POLYART
                     </h1>
                     <!-- คำอธิบายย่อ -->
+                    <h2 class="h4 text-warning mb-3">Polynomial Art Recording Tool</h2>
                     <p class="lead mb-4 hero-subtitle">
-                        ใช้เทคนิค <span class="text-warning fw-bold">Computer Vision</span> และ 
-                        <span class="text-info fw-bold">Machine Learning</span> 
-                        เพื่อแปลงภาพขาวดำหรือลายเส้นเป็นสมการพหุนาม
+                        <span class="text-warning fw-bold">บันทึกลวดลายศิลปวัฒนธรรมไทยและนานาชาติ</span> 
+                        ด้วยการแปลงภาพเป็นสมการทางคณิตศาสตร์ 
+                        เพื่อการ<span class="text-info fw-bold">เรียนรู้</span>และ<span class="text-info fw-bold">อนุรักษ์</span>
+
                     </p>
                     <!-- ปุ่มเริ่มต้นใช้งาน -->
                     <div class="d-flex gap-3 hero-buttons">
@@ -102,16 +129,44 @@
                         </button>
                     </div>
                 </div>
-                <!-- ส่วนไอคอนและ Animation (ฝั่งขวา) -->
+                <!-- ส่วนโลโก้ POLYART (ฝั่งขวา) -->
                 <div class="col-lg-6">
                     <div class="text-center">
-                        <!-- ไอคอนหลักที่มี Animation -->
-                        <i class="fas fa-chart-line display-1 text-white-50 floating-icon"></i>
-                        <!-- Elements ที่ลอยอยู่รอบๆ -->
+                        <!-- POLYART Logo -->
+                        <div class="polyart-logo-container">
+                            <svg class="polyart-logo" viewBox="0 0 300 150" xmlns="http://www.w3.org/2000/svg">
+                                <defs>
+                                    <linearGradient id="heroCurveGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                        <stop offset="0%" style="stop-color:#ffffff;stop-opacity:0.9" />
+                                        <stop offset="50%" style="stop-color:#e8f4fd;stop-opacity:0.8" />
+                                        <stop offset="100%" style="stop-color:#ffffff;stop-opacity:0.9" />
+                                    </linearGradient>
+                                    <radialGradient id="heroDot1" cx="50%" cy="50%" r="50%">
+                                        <stop offset="0%" style="stop-color:#ffffff;stop-opacity:1" />
+                                        <stop offset="100%" style="stop-color:#ffffff;stop-opacity:0.7" />
+                                    </radialGradient>
+                                    <filter id="heroShadow">
+                                        <feDropShadow dx="2" dy="4" stdDeviation="3" flood-color="rgba(255, 255, 255, 0.3)"/>
+                                    </filter>
+                                </defs>
+                                <path d="M 30,120 Q 75,30 120,75 T 200,60 T 270,90" 
+                                      stroke="url(#heroCurveGradient)" 
+                                      stroke-width="6" 
+                                      fill="none" 
+                                      stroke-linecap="round"
+                                      stroke-linejoin="round"
+                                      filter="url(#heroShadow)"
+                                      class="hero-curve"/>
+                                <circle cx="30" cy="120" r="8" fill="url(#heroDot1)" class="floating-dot-hero"/>
+                                <circle cx="120" cy="75" r="8" fill="url(#heroDot1)" class="floating-dot-hero"/>
+                                <circle cx="270" cy="90" r="8" fill="url(#heroDot1)" class="floating-dot-hero"/>
+                            </svg>
+                        </div>
+                        <!-- สมการพหุนามที่ลอยอยู่รอบๆ -->
                         <div class="hero-decoration">
-                            <div class="floating-element">📊</div>
-                            <div class="floating-element">📈</div>
-                            <div class="floating-element">🔍</div>
+                            <div class="floating-element polynomial-equation">x² + y² = 1</div>
+                            <div class="floating-element polynomial-equation">x² + y² = 0.6</div>
+                    
                         </div>
                     </div>
                 </div>
@@ -173,7 +228,7 @@
                                     <br>
                                     <small class="text-muted">
                                         <i class="fas fa-lightbulb text-warning me-1"></i>
-                                        <strong>เคล็ดลับ:</strong> ภาพที่มีเส้นโค้งชัดเจนจะให้ผลลัพธ์ที่ดีที่สุด
+                                        <strong>เคล็ดลับ:</strong> ภาพที่มีรูปทรง วงกลม เส้นตรง หรือเส้นโค้งชัดเจนจะได้สมการทางคणิตศาสตร์ที่แม่นยำที่สุด
                                     </small>
                                 </div>
                             </div>
@@ -198,69 +253,31 @@
                                             </div>
                                         </div>
                                     </div>
-                                    <!-- ส่วนการตั้งค่าพารามิเตอร์ -->
+                                    <!-- ส่วนปุ่มประมวลผลอัตโนมัติ -->
                                     <div class="col-md-6">
                                         <div class="card">
-                                            <div class="card-header">
-                                                <h6 class="card-title mb-0">การตั้งค่า</h6>
+                                            <div class="card-header bg-success text-white">
+                                                <h6 class="card-title mb-0">
+                                                    <i class="fas fa-magic me-2"></i>ประมวลผลอัตโนมัติ
+                                                </h6>
                                             </div>
-                                            <div class="card-body">
-                                                <!-- 
-                                                    🔢 Polynomial Degree Selection - เลือกดีกรีพหุนาม
-                                                    ===================================================
-                                                    ให้ผู้ใช้เลือกดีกรีพหุนามที่ต้องการวิเคราะห์
-                                                    - Checkbox Input สำหรับเลือกหลายดีกรี
-                                                    - ค่าเริ่มต้น: ดีกรี 2, 3, 4 เลือกไว้
-                                                -->
+                                            <div class="card-body text-center">
                                                 <div class="mb-3">
-                                                    <label class="form-label">ดีกรีพหุนาม</label>
-                                                    <div class="form-check">
-                                                        <input class="form-check-input" type="checkbox" value="2" id="degree2" checked>
-                                                        <label class="form-check-label" for="degree2">
-                                                            ดีกรี 2 (Quadratic)
-                                                        </label>
-                                                    </div>
-                                                    <div class="form-check">
-                                                        <input class="form-check-input" type="checkbox" value="3" id="degree3" checked>
-                                                        <label class="form-check-label" for="degree3">
-                                                            ดีกรี 3 (Cubic)
-                                                        </label>
-                                                    </div>
-                                                    <div class="form-check">
-                                                        <input class="form-check-input" type="checkbox" value="4" id="degree4" checked>
-                                                        <label class="form-check-label" for="degree4">
-                                                            ดีกรี 4 (Quartic)
-                                                        </label>
-                                                    </div>
-                                                    <div class="form-check">
-                                                        <input class="form-check-input" type="checkbox" value="5" id="degree5">
-                                                        <label class="form-check-label" for="degree5">
-                                                            ดีกรี 5 (Quintic)
-                                                        </label>
-                                                    </div>
-                                                </div>
-                                                
-                                                <!-- 
-                                                    🎚️ Edge Detection Sensitivity - ความไวการตรวจจับขอบ
-                                                    ===================================================
-                                                    Slider สำหรับปรับความไวในการตรวจจับขอบของภาพ
-                                                    - Range Input: 50-200
-                                                    - ค่าเริ่มต้น: 100
-                                                    - ยิ่งสูง = ยิ่งไว = จับขอบได้มากขึ้น
-                                                -->
-                                                <div class="mb-3">
-                                                    <label for="edgeThreshold" class="form-label">ความไว Edge Detection</label>
-                                                    <input type="range" class="form-range" id="edgeThreshold" min="50" max="200" value="100">
-                                                    <div class="d-flex justify-content-between">
-                                                        <small>น้อย</small>
-                                                        <small>มาก</small>
-                                                    </div>
+                                                    <i class="fas fa-cogs fa-3x text-success mb-2"></i>
+                                                    <p class="text-muted mb-0">ระบบจะวิเคราะห์ภาพและสร้างสมการทางคณิตศาสตร์โดยอัตโนมัติ</p>
                                                 </div>
                                                 
                                                 <!-- ปุ่มเริ่มวิเคราะห์ - เรียกฟังก์ชัน processImage() -->
                                                 <button class="btn btn-success btn-lg w-100 shadow-lg" onclick="processImage()">
-                                                    <i class="fas fa-magic me-2"></i>🔍 เริ่มวิเคราะห์ภาพ
+                                                    <i class="fas fa-play me-2"></i> สร้างสมการคณิตศาสตร์ทันที
                                                 </button>
+                                                
+                                                <div class="mt-3">
+                                                    <small class="text-success">
+                                                        <i class="fas fa-check-circle me-1"></i>
+                                                        <strong>ไม่ต้องตั้งค่า</strong> - ได้ผลทันที!
+                                                    </small>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -305,13 +322,20 @@
             <div class="row">
                 <div class="col-12">
                     <h2 class="text-center mb-5">
-                        <i class="fas fa-chart-bar me-2"></i>ผลลัพธ์การวิเคราะห์
+                        <i class="fas fa-chart-bar me-2"></i>สมการทางคณิตศาสตร์ที่สร้างได้
                     </h2>
                 </div>
             </div>
 
             <!-- 
-                📈 Results Container - คอนเทนเนอร์หลักสำหรับแสดงผลลัพธ์
+                � Edge Detection Results - ผลการตรวจจับขอบ
+                =============================================
+                แสดงข้อมูลการตรวจจับขอบก่อนสร้างสมการ
+            -->
+            <div id="edgeDetectionResults" class="mb-4"></div>
+
+            <!-- 
+                �📈 Results Container - คอนเทนเนอร์หลักสำหรับแสดงผลลัพธ์
                 =========================================================
                 แสดงเมื่อมีการประมวลผลสำเร็จ (d-none = ซ่อนไว้ตอนเริ่มต้น)
             -->
@@ -324,41 +348,30 @@
                     - แต่ละการ์ดแสดงข้อมูลสถิติแตกต่างกัน
                 -->
                 <div class="row mb-4">
-                    <!-- การ์ดที่ 1: ดีกรีที่ดีที่สุด -->
-                    <div class="col-md-3">
-                        <div class="card text-center h-100 border-0 shadow-lg">
-                            <div class="card-body">
-                                <i class="fas fa-trophy text-warning fa-2x mb-2"></i>
-                                <h5 class="card-title">🏆 ดีกรีที่ดีที่สุด</h5>
-                                <!-- ค่าจะถูกอัปเดตจาก JavaScript -->
-                                <h3 id="bestDegree" class="text-primary fw-bold">-</h3>
-                            </div>
-                        </div>
-                    </div>
-                    <!-- การ์ดที่ 2: R² Score (ค่าความแม่นยำ) -->
-                    <div class="col-md-3">
+                    <!-- การ์ดที่ 1: ความแม่นยำ -->
+                    <div class="col-md-4">
                         <div class="card text-center h-100 border-0 shadow-lg">
                             <div class="card-body">
                                 <i class="fas fa-bullseye text-success fa-2x mb-2"></i>
-                                <h5 class="card-title">🎯 R² Score</h5>
-                                <!-- R² Score ยิ่งใกล้ 1 = ยิ่งแม่นยำ -->
-                                <h3 id="bestR2" class="text-success fw-bold">-</h3>
+                                <h5 class="card-title">🎯 ความแม่นยำ</h5>
+                                <!-- ความแม่นยำของสมการที่ดีที่สุด -->
+                                <h3 id="bestAccuracy" class="text-success fw-bold">-</h3>
                             </div>
                         </div>
                     </div>
-                    <!-- การ์ดที่ 3: RMSE (Root Mean Square Error) -->
-                    <div class="col-md-3">
+                    <!-- การ์ดที่ 2: จำนวนสมการ -->
+                    <div class="col-md-4">
                         <div class="card text-center h-100 border-0 shadow-lg">
                             <div class="card-body">
-                                <i class="fas fa-exclamation-triangle text-warning fa-2x mb-2"></i>
-                                <h5 class="card-title">⚠️ RMSE</h5>
-                                <!-- RMSE ยิ่งน้อย = ยิ่งแม่นยำ -->
-                                <h3 id="bestRMSE" class="text-warning fw-bold">-</h3>
+                                <i class="fas fa-calculator text-warning fa-2x mb-2"></i>
+                                <h5 class="card-title">📝 จำนวนสมการ</h5>
+                                <!-- จำนวนสมการที่สร้างได้ -->
+                                <h3 id="totalEquations" class="text-warning fw-bold">-</h3>
                             </div>
                         </div>
                     </div>
-                    <!-- การ์ดที่ 4: จำนวนจุดข้อมูล -->
-                    <div class="col-md-3">
+                    <!-- การ์ดที่ 3: จำนวนจุดข้อมูล -->
+                    <div class="col-md-4">
                         <div class="card text-center h-100 border-0 shadow-lg">
                             <div class="card-body">
                                 <i class="fas fa-dot-circle text-info fa-2x mb-2"></i>
@@ -368,50 +381,9 @@
                             </div>
                         </div>
                     </div>
-                </div>                <!-- 
-                    📊 Charts Section - ส่วนแสดงกราฟและการวิเคราะห์
-                    ===================================================
-                    แสดงผลการวิเคราะห์ในรูปแบบกราฟ
-                    - กราฟเปรียบเทียบพหุนามใช้พื้นที่ 8 คอลัมน์ (ใหญ่กว่า)
-                    - กราฟตรวจหาขอบใช้พื้นที่ 4 คอลัมน์
-                    - ใช้ HTML5 Canvas สำหรับการแสดงผล
-                -->
-                <div class="row mb-4">
-                    <!-- กราฟที่ 2: เปรียบเทียบพหุนาม (ขยายขนาดให้ใหญ่ขึ้น) -->
-                    <div class="col-lg-8">
-                        <div class="card h-100">
-                            <div class="card-header">
-                                <h5 class="card-title mb-0">
-                                    <i class="fas fa-chart-line me-2"></i>📈 เปรียบเทียบพหุนาม (กราหหลัก)
-                                </h5>
-                                <small class="text-muted">
-                                    <i class="fas fa-info-circle me-1"></i>
-                                    กราฟแสดงการเปรียบเทียบพหุนามดีกรีต่างๆ กับจุดข้อมูลที่สกัดจากภาพ
-                                </small>
-                            </div>                            <div class="card-body">
-                                <!-- Canvas สำหรับแสดงกราฟเปรียบเทียบพหุนาม (ขนาดใหญ่ขึ้น) -->
-                                <canvas id="polynomialChart" class="polynomial-chart-large"></canvas>
-                            </div>
-                        </div>
-                    </div>
-                    <!-- กราฟที่ 1: การตรวจหาขอบ (ลดขนาดลง) -->
-                    <div class="col-lg-4">
-                        <div class="card h-100">
-                            <div class="card-header">
-                                <h5 class="card-title mb-0">
-                                    <i class="fas fa-image me-2"></i>🔍 การตรวจหาขอบ
-                                </h5>
-                                <small class="text-muted">
-                                    <i class="fas fa-info-circle me-1"></i>
-                                    ผลการตรวจหาขอบของภาพ
-                                </small>
-                            </div>                            <div class="card-body text-center">
-                                <!-- Canvas สำหรับแสดงผลการตรวจหาขอบ -->
-                                <canvas id="edgeCanvas" class="img-fluid edge-canvas-compact"></canvas>
-                            </div>
-                        </div>
-                    </div>
                 </div>
+
+                <!-- ลบส่วนกราฟสมการคณิตศาสตร์ออกแล้ว -->
 
                 <!-- 
                     🧮 Polynomial Equations Section - ส่วนแสดงสมการพหุนาม
@@ -425,10 +397,46 @@
                         <div class="card">
                             <div class="card-header">
                                 <h5 class="card-title mb-0">
-                                    <i class="fas fa-calculator me-2"></i>สมการพหุนาม
+                                    <i class="fas fa-calculator me-2"></i>📝 สมการทางคณิตศาสตร์
                                 </h5>
+                                <small class="text-muted">
+                                    <i class="fas fa-copy me-1"></i>คัดลอกสมการเหล่านี้ไปใช้กับโปรแกรมกราฟิกต่างๆ
+                                </small>
                             </div>
                             <div class="card-body">
+                                <!-- ตัวอย่างสมการลายไทย -->
+                                <div class="row mb-3">
+                                    <div class="col-12">
+                                        <h6><i class="fas fa-lightbulb text-warning me-1"></i> ตัวอย่างสมการลายไทยที่อาจได้รับ:</h6>
+                                        <div class="border rounded p-3 bg-light">
+                                            <div class="row">
+                                                <div class="col-md-6">
+                                                    <small class="text-muted d-block mb-1"><strong>วงกลม:</strong></small>
+                                                    <code class="small d-block mb-2">\left(x\right)^{2}+\left(y\right)^{2}=1</code>
+                                                    
+                                                    <small class="text-muted d-block mb-1"><strong>วงรี:</strong></small>
+                                                    <code class="small d-block mb-2">\frac{x^{2}}{a^{2}}+\frac{y^{2}}{b^{2}}=1</code>
+                                                    
+                                                    <small class="text-muted d-block mb-1"><strong>เส้นตรง:</strong></small>
+                                                    <code class="small d-block">y=mx+c</code>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <small class="text-muted d-block mb-1"><strong>พาราโบลา:</strong></small>
+                                                    <code class="small d-block mb-2">y=ax^{2}+bx+c</code>
+                                                    
+                                                    <small class="text-muted d-block mb-1"><strong>วงกลมมีเงื่อนไข:</strong></small>
+                                                    <code class="small d-block mb-2">\left(x-h\right)^{2}+\left(y-k\right)^{2}=r^{2}\left\{x>0\right\}</code>
+                                                    
+                                                    <small class="text-muted d-block mb-1"><strong>เส้นโค้งซับซ้อน:</strong></small>
+                                                    <code class="small d-block">x^{3}+y^{3}=3xy</code>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- ลบ Container สำหรับกราฟที่ซ้ำออกแล้ว -->
+
                                 <!-- Container สำหรับแสดงสมการ - จะถูกเติมด้วย JavaScript -->
                                 <div id="equationsContainer" class="row">
                                     <!-- Equations will be populated here -->
@@ -438,8 +446,10 @@
                     </div>
                 </div>
 
+                <!-- ลบส่วน Desmos Quick Preview Section ออกแล้ว -->
+
                 <!-- 
-                    💾 Download Section - ส่วนดาวน์โหลดผลลัพธ์
+                    �💾 Download Section - ส่วนดาวน์โหลดผลลัพธ์
                     =============================================
                     ให้ผู้ใช้ดาวน์โหลดผลลัพธ์ในรูปแบบต่างๆ
                     - JSON: สำหรับ Developer หรือการประมวลผลต่อ
@@ -455,19 +465,7 @@
                                 </h5>
                             </div>
                             <div class="card-body">
-                                <div class="row">
-                                    <!-- ปุ่มดาวน์โหลด JSON -->
-                                    <div class="col-md-4">
-                                        <button class="btn btn-primary w-100" onclick="downloadResults('json')">
-                                            <i class="fas fa-file-code me-2"></i>ดาวน์โหลด JSON
-                                        </button>
-                                    </div>
-                                    <!-- ปุ่มดาวน์โหลด CSV -->
-                                    <div class="col-md-4">
-                                        <button class="btn btn-success w-100" onclick="downloadResults('csv')">
-                                            <i class="fas fa-file-csv me-2"></i>ดาวน์โหลด CSV
-                                        </button>
-                                    </div>
+                                <div class="row">     
                                     <!-- ปุ่มดาวน์โหลด TXT -->
                                     <div class="col-md-4">
                                         <button class="btn btn-info w-100" onclick="downloadResults('txt')">
@@ -488,8 +486,14 @@
             -->
             <div id="noResultsMessage" class="text-center">
                 <i class="fas fa-chart-line fa-4x text-muted mb-3"></i>
-                <h4 class="text-muted">ยังไม่มีผลลัพธ์</h4>
-                <p class="text-muted">อัปโหลดภาพและเริ่มวิเคราะห์เพื่อดูผลลัพธ์</p>
+                <h4 class="text-muted">ยังไม่มีสมการทางคณิตศาสตร์</h4>
+                <p class="text-muted">อัปโหลดภาพและเริ่มสร้างสมการลายไทยจากการวิเคราะห์ภาพ</p>
+                <div class="mt-3">
+                    <small class="text-muted">
+                        <i class="fas fa-lightbulb text-warning me-1"></i>
+                        <strong>คำแนะนำ:</strong> ลองใช้ภาพที่มีรูปทรงเรขาคณิต เช่น วงกลม สี่เหลี่ยม หรือเส้นโค้งต่างๆ
+                    </small>
+                </div>
             </div>
         </div>
     </section>    <!-- About Section -->
@@ -506,7 +510,7 @@
             <div class="row">
                 <div class="col-12">
                     <h2 class="text-center mb-5">
-                        <i class="fas fa-info-circle me-2"></i>เกี่ยวกับระบบ
+                        <i class="fas fa-palette me-2"></i>เกี่ยวกับ POLYART
                     </h2>
                 </div>
             </div>
@@ -519,41 +523,41 @@
                 - แต่ละการ์ดอธิบายเทคโนโลยีแตกต่างกัน
             -->
             <div class="row">
-                <!-- การ์ดที่ 1: Computer Vision -->
+                <!-- การ์ดที่ 1: การอนุรักษ์ศิลปวัฒนธรรม -->
                 <div class="col-lg-4">
                     <div class="card text-center h-100">
                         <div class="card-body">
-                            <i class="fas fa-eye text-primary fa-3x mb-3"></i>
-                            <h5 class="card-title">Computer Vision</h5>
+                            <i class="fas fa-landmark text-primary fa-3x mb-3"></i>
+                            <h5 class="card-title">อนุรักษ์ศิลปวัฒนธรรม</h5>
                             <p class="card-text">
-                                ใช้เทคนิค Edge Detection และ Image Processing 
-                                เพื่อสกัดจุดข้อมูลจากภาพ
+                                บันทึกลวดลายศิลปะไทยและนานาชาติในรูปแบบ
+                                สมการทางคณิตศาสตร์เพื่อการเรียนรู้และอนุรักษ์
                             </p>
                         </div>
                     </div>
                 </div>
-                <!-- การ์ดที่ 2: Machine Learning -->
+                <!-- การ์ดที่ 2: การศึกษาคณิตศาสตร์ -->
                 <div class="col-lg-4">
                     <div class="card text-center h-100">
                         <div class="card-body">
-                            <i class="fas fa-brain text-success fa-3x mb-3"></i>
-                            <h5 class="card-title">Machine Learning</h5>
+                            <i class="fas fa-graduation-cap text-success fa-3x mb-3"></i>
+                            <h5 class="card-title">การศึกษาคณิตศาสตร์</h5>
                             <p class="card-text">
-                                ใช้ Polynomial Regression และ Statistical Analysis 
-                                เพื่อหาสมการที่เหมาะสมที่สุด
+                                เชื่อมโยงศิลปะและคณิตศาสตร์ผ่านการสร้างสมการ
+                                เพื่อสร้างความเข้าใจที่ลึกซึ้งในทั้งสองสาขา
                             </p>
                         </div>
                     </div>
                 </div>
-                <!-- การ์ดที่ 3: Polynomial Analysis -->
+                <!-- การ์ดที่ 3: เครื่องมือวิเคราะห์ -->
                 <div class="col-lg-4">
                     <div class="card text-center h-100">
                         <div class="card-body">
                             <i class="fas fa-chart-line text-warning fa-3x mb-3"></i>
-                            <h5 class="card-title">Polynomial Analysis</h5>
+                            <h5 class="card-title">เครื่องมือวิเคราะห์</h5>
                             <p class="card-text">
-                                วิเคราะห์พหุนามหลายดีกรี (2-5) และเปรียบเทียบ
-                                ความแม่นยำด้วย R² Score และ RMSE
+                                สร้างสมการทางคณิตศาสตร์ที่แม่นยำ
+                                เพื่อการแสดงผลและศึกษาลวดลายไทย
                             </p>
                         </div>
                     </div>
@@ -571,14 +575,15 @@
                 <!-- ภาพที่เหมาะสม -->
                 <div class="col-lg-6">
                     <!-- ใช้ไอคอน check-circle สีเขียวเพื่อแสดงความเหมาะสม -->
-                    <h4><i class="fas fa-check-circle text-success me-2"></i>✅ ประเภทภาพที่เหมาะสม</h4>
+                    <h4><i class="fas fa-check-circle text-success me-2"></i>✅ ลวดลายที่เหมาะสม</h4>
                     <ul class="list-unstyled">
-                        <!-- รายการภาพที่เหมาะสมสำหรับการวิเคราะห์ -->
-                        <li><i class="fas fa-check text-success me-2"></i>📊 ภาพกราฟฟังก์ชันคณิตศาสตร์</li>
-                        <li><i class="fas fa-check text-success me-2"></i>〰️ ลายเส้นโค้งต่างๆ ที่ชัดเจน</li>
-                        <li><i class="fas fa-check text-success me-2"></i>⚫ ภาพขาวดำหรือ Grayscale</li>
-                        <li><i class="fas fa-check text-success me-2"></i>✏️ ภาพวาดเส้นทางหรือเส้นโค้ง</li>
-                        <li><i class="fas fa-check text-success me-2"></i>📈 กราฟจากหนังสือหรือเอกสาร</li>
+                        <!-- รายการลวดลายที่เหมาะสมสำหรับการบันทึกและสร้างสมการ -->
+                        <li><i class="fas fa-check text-success me-2"></i>🎨 ลายไทยดั้งเดิม (ลายกระจัง ลายก้นบุ้ง)</li>
+                        <li><i class="fas fa-check text-success me-2"></i>🏛️ ลวดลายสถาปัตยกรรม (เจดีย์ ปรางค์)</li>
+                        <li><i class="fas fa-check text-success me-2"></i>🌸 ลายดอกไม้และใบไผ่ในศิลปะไทย</li>
+                        <li><i class="fas fa-check text-success me-2"></i>🌍 ลวดลายศิลปะนานาชาติ (เซลติก แมนดาลา)</li>
+                        <li><i class="fas fa-check text-success me-2"></i>✏️ ภาพวาดเส้นที่เป็นรูปทรงพื้นฐาน</li>
+                        <li><i class="fas fa-check text-success me-2"></i>🎨 โลโก้หรือสัญลักษณ์ที่เป็นเส้นโครง</li>
                     </ul>
                 </div>
                 <!-- ภาพที่ไม่เหมาะสม -->
@@ -611,10 +616,10 @@
             <div class="row">
                 <!-- ข้อมูลแอปพลิเคชัน -->
                 <div class="col-md-6">
-                    <h5><i class="fas fa-chart-line me-2"></i>Image to Polynomial Web App</h5>
+                    <h5>🎨 POLYART - Polynomial Art Recording Tool</h5>
                     <p class="text-muted">
-                        แอปพลิเคชันเว็บสำหรับแปลงภาพเป็นสมการพหุนาม
-                        โดยใช้เทคนิค Computer Vision และ Machine Learning
+                        เว็บแอปพลิเคชันสำหรับบันทึกลวดลายศิลปวัฒนธรรมไทยและนานาชาติ
+                        ด้วยการแปลงภาพเป็นสมการคณิตศาสตร์เพื่อการเรียนรู้และอนุรักษ์
                     </p>
                 </div>
                 <!-- รายการเทคโนโลยี -->
@@ -635,7 +640,11 @@
             <!-- Copyright -->
             <div class="row">
                 <div class="col-12 text-center">
-                    <p class="mb-0">&copy; 2025 Image to Polynomial Web App. All rights reserved.</p>
+                                        <p class="mb-0">&copy; 2025 POLYART - Polynomial Art Recording Tool. สงวนลิขสิทธิ์เพื่อการอนุรักษ์ศิลปวัฒนธรรม.</p>
+                    <small class="text-muted">
+                        <i class="fas fa-palette me-1"></i>
+                        เครื่องมือวิเคราะห์ลวดลายศิลปะไทยด้วยคณิตศาสตร์
+                    </small>
                 </div>
             </div>
         </div>
