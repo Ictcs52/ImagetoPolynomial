@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="คู่มือทำความเข้าใจโครงงาน POLYART ตั้งแต่แนวคิด การประมวลผลภาพ คณิตศาสตร์ การทำงานของโปรแกรม ข้อจำกัด และแนวคำถามกรรมการ">
+<title>POLYART — คู่มือเข้าใจโครงงานทั้งหมด</title>
+<style>
+:root{--bg:#f5f7fb;--card:#fff;--ink:#17223b;--muted:#667085;--line:#dfe5ef;--primary:#3758d3;--cyan:#1686a7;--purple:#7648bd;--green:#27845b;--orange:#d46b28;--red:#c64050;--yellow:#f2c94c;--navy:#142552}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:linear-gradient(180deg,#eef2ff 0,#f7f9fc 420px);color:var(--ink);font-family:"Noto Sans Thai","Leelawadee UI","Segoe UI",Tahoma,Arial,sans-serif;line-height:1.7}.wrap{max-width:1180px;margin:auto;padding:24px}.hero{position:relative;overflow:hidden;background:linear-gradient(135deg,#142552 0%,#3758d3 55%,#7648bd 100%);color:#fff;border-radius:26px;padding:38px;box-shadow:0 18px 44px rgba(33,53,130,.24)}.hero:before,.hero:after{content:"";position:absolute;border:2px solid rgba(255,255,255,.14);border-radius:50%}.hero:before{width:330px;height:330px;right:-90px;top:-150px}.hero:after{width:220px;height:220px;right:120px;bottom:-160px}.hero>*{position:relative;z-index:1}.hero h1{margin:0 0 8px;font-size:clamp(30px,4vw,50px);line-height:1.16}.hero p{margin:0;max-width:840px;color:#e9ecff;font-size:18px}.badge{display:inline-block;background:var(--yellow);color:#332b0b;border-radius:999px;padding:6px 12px;font-weight:900;font-size:13px;margin-bottom:14px}.actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:18px}.btn{display:inline-block;border:0;text-decoration:none;border-radius:999px;padding:10px 15px;font-weight:900;cursor:pointer}.btn-yellow{background:var(--yellow);color:#332b0b}.btn-light{background:rgba(255,255,255,.14);color:#fff;border:1px solid rgba(255,255,255,.36)}.nav{position:sticky;top:0;z-index:20;margin:16px 0;background:rgba(245,247,251,.94);backdrop-filter:blur(10px);border:1px solid var(--line);border-radius:15px;padding:10px;display:flex;gap:7px;overflow:auto}.nav a{white-space:nowrap;text-decoration:none;color:#35446b;background:#fff;border:1px solid #e1e6f0;padding:7px 11px;border-radius:999px;font-size:13px;font-weight:800}.nav a:hover{background:#eaf0ff;color:var(--primary)}.section{scroll-margin-top:82px}h2{margin:36px 0 14px;font-size:28px;line-height:1.35;color:var(--navy)}h3{margin:0 0 8px;font-size:19px;color:#223464}p{margin:8px 0 12px}.grid{display:grid;gap:16px}.g2{grid-template-columns:repeat(2,minmax(0,1fr))}.g3{grid-template-columns:repeat(3,minmax(0,1fr))}.g4{grid-template-columns:repeat(4,minmax(0,1fr))}.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:20px;box-shadow:0 6px 18px rgba(36,47,78,.055)}.card ul,.card ol{padding-left:22px}.center{text-align:center}.metric{font-size:31px;font-weight:950;color:var(--primary);line-height:1.1}.small{font-size:13px;color:var(--muted)}.flow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:#fff;border:1px solid var(--line);border-radius:17px;padding:16px}.step{background:#eef2ff;border:1px solid #d9e1ff;border-radius:11px;padding:9px 12px;font-weight:900;color:#29409a}.arrow{color:var(--primary);font-size:21px;font-weight:900}.warn,.good,.info,.critical{padding:15px 17px;border-radius:14px;margin:13px 0}.warn{background:#fff4e9;border:1px solid #f0cfb0;border-left:6px solid var(--orange)}.good{background:#ebf8f1;border:1px solid #c8e7d6;border-left:6px solid var(--green)}.info{background:#edf5ff;border:1px solid #ccdaef;border-left:6px solid var(--primary)}.critical{background:#fff0f2;border:1px solid #efc8ce;border-left:6px solid var(--red)}table{width:100%;border-collapse:collapse;background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 2px 10px rgba(30,44,80,.035)}th,td{padding:11px 12px;border-bottom:1px solid #e8ecf3;text-align:left;vertical-align:top}th{background:#eaf0ff;color:#263d90}code{background:#edf0f6;padding:2px 5px;border-radius:6px;color:#7a316d}.formula{font-family:Consolas,"Courier New",monospace;background:#14213d;color:#f5f8ff;border-radius:13px;padding:15px;text-align:center;overflow:auto}.qa details{background:#fff;border:1px solid var(--line);border-radius:13px;margin:9px 0;padding:12px 15px}.qa summary{font-weight:900;cursor:pointer;color:#263d90}.keybox{border:2px solid var(--primary);background:#f0f4ff;border-radius:19px;padding:21px}.keybox ol{margin:8px 0 0 21px;padding:0}.tag{display:inline-block;padding:4px 9px;border-radius:999px;font-weight:800;font-size:12px;background:#edf0ff;color:#4050a0;margin:3px}.filetree{font-family:Consolas,monospace;white-space:pre-wrap;background:#14213d;color:#edf3ff;padding:17px;border-radius:14px;line-height:1.75}.compare td:first-child{font-weight:850;color:#293c78}.footer{margin:36px 0 10px;color:var(--muted);font-size:13px;text-align:center}.no{color:#9f2f40}.yes{color:#23754e}.checklist li{margin-bottom:7px}@media(max-width:850px){.g2,.g3,.g4{grid-template-columns:1fr}.wrap{padding:14px}.hero{padding:28px 21px}table{display:block;overflow-x:auto}.nav{top:0}}@media print{body{background:#fff}.nav,.actions{display:none}.wrap{max-width:none;padding:0}.hero{box-shadow:none;border-radius:0}.card,.keybox,.warn,.good,.info,.critical{break-inside:avoid}h2{break-after:avoid}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header class="hero">
+<div class="badge">POLYART • Student Project & Jury Guide</div>
+<h1>คู่มือเข้าใจโครงงานทั้งหมด</h1>
+<p>สรุปตั้งแต่ปัญหา แนวคิด การประมวลผลภาพ หลักคณิตศาสตร์ โครงสร้างโปรแกรม การแปลผล ข้อจำกัด และแนวคำตอบกรรมการ ให้ตรงกับระบบที่ทำงานจริง</p>
+<div class="actions"><a class="btn btn-yellow" href="index.html">เปิดโปรแกรม POLYART</a><button class="btn btn-light" onclick="window.print()">พิมพ์ / Save as PDF</button></div>
+</header>
+
+<nav class="nav" aria-label="สารบัญ">
+<a href="#mustknow">ต้องเข้าใจก่อน</a><a href="#overview">ภาพรวม</a><a href="#problem">ที่มาและเป้าหมาย</a><a href="#io">Input–Output</a><a href="#tech">เทคโนโลยี</a><a href="#pipeline">ขั้นตอนทำงาน</a><a href="#image">ประมวลผลภาพ</a><a href="#math">คณิตศาสตร์</a><a href="#equations">สมการ</a><a href="#results">แปลผล</a><a href="#files">โครงสร้างโค้ด</a><a href="#test">การทดสอบ</a><a href="#limits">ข้อจำกัด</a><a href="#future">พัฒนาต่อ</a><a href="#qa">กรรมการถาม</a><a href="#script">บทพูด</a>
+</nav>
+
+<section id="mustknow" class="section">
+<h2>0. สิ่งที่ต้องเข้าใจให้ถูกก่อนนำเสนอ</h2>
+<div class="keybox"><h3>7 ประโยคที่ต้องจำ</h3><ol>
+<li><strong>POLYART แปลงลักษณะสำคัญของภาพเป็นชุดสมการเพื่อประมาณรูปทรง</strong> ไม่ได้สร้างสมการเดียวที่เหมือนภาพทุกพิกเซล</li>
+<li>ระบบเวอร์ชันปัจจุบันใช้ <strong>Sobel Operator</strong> ตรวจหาความเปลี่ยนแปลงของความสว่างบริเวณขอบภาพ</li>
+<li>ระบบแปลงตำแหน่งพิกเซลเป็นพิกัดคณิตศาสตร์ โดยย้ายจุดกำเนิดไปกลางภาพและกลับทิศแกน Y</li>
+<li>เส้นทางหลักของระบบใช้การแปลงภาพเป็นขาว–ดำและสร้างสมการจากพิกเซล/รูปทรงที่ตรวจพบ ส่วน Polynomial Regression เป็นหนึ่งในเครื่องมือประกอบและทางเลือกสำรอง</li>
+<li>สมการที่มีเงื่อนไขโดเมน เช่น <code>{a≤x≤b}</code> ช่วยให้วาดเฉพาะช่วงที่ต้องการ ไม่ลากเส้นไปทั่วกราฟ</li>
+<li><strong>ค่า accuracy ที่แสดงในสมการบางประเภทเป็นคะแนนเชิงกฎของโปรแกรม</strong> ยังไม่ใช่ผลทดสอบความแม่นยำจากชุดข้อมูลมาตรฐาน</li>
+<li>ผลลัพธ์ควรเรียกว่า <strong>การประมาณหรือการแทนรูปด้วยสมการ</strong> ไม่ควรกล่าวว่า “ถอดสมการต้นฉบับได้ถูกต้อง 100%”</li>
+</ol></div>
+<div class="critical"><strong>คำที่ไม่ควรพูด:</strong> “ใช้ AI อ่านภาพและรู้สมการจริงของภาพโดยอัตโนมัติ”<br><strong>ควรพูด:</strong> “ใช้เทคนิคประมวลผลภาพและอัลกอริทึมทางคณิตศาสตร์เพื่อสร้างสมการที่ประมาณลักษณะของภาพ”</div>
+</section>
+
+<section id="overview" class="section">
+<h2>1. โครงงานนี้ทำอะไร?</h2>
+<div class="card"><p><strong>POLYART — Polynomial Art Recording Tool</strong> เป็นเว็บแอปพลิเคชันที่รับภาพลวดลายหรือภาพเส้น ตรวจหาจุดและรูปทรงสำคัญ แล้วแปลงเป็นชุดสมการทางคณิตศาสตร์ที่สามารถคัดลอกไปทดลองวาดกราฟต่อได้ แนวคิดของโครงงานคือเชื่อมโยง <strong>ศิลปะ วัฒนธรรม คณิตศาสตร์ และการเขียนโปรแกรม</strong></p><div class="good"><strong>ประโยคหลัก:</strong> “POLYART ช่วยบันทึกและศึกษาลักษณะของลวดลายผ่านภาษาของคณิตศาสตร์ โดยเปลี่ยนข้อมูลภาพให้เป็นพิกัดและสมการที่นำไปทดลองต่อได้”</div></div>
+<div class="grid g3" style="margin-top:16px"><div class="card center"><div class="metric">Image</div><p>รับภาพ JPG/JPEG/PNG สูงสุด 16 MB</p></div><div class="card center"><div class="metric">Analyze</div><p>อ่านพิกเซล ตรวจขอบ และค้นหารูปแบบ</p></div><div class="card center"><div class="metric">Equation</div><p>สร้าง คัดลอก และดาวน์โหลดชุดสมการ</p></div></div>
+</section>
+
+<section id="problem" class="section">
+<h2>2. ที่มา ปัญหา และวัตถุประสงค์</h2>
+<div class="grid g2"><div class="card"><h3>ปัญหาที่สนใจ</h3><ul><li>ลวดลายศิลปะมีรูปทรงซับซ้อนและอธิบายด้วยคณิตศาสตร์ได้ยาก</li><li>นักเรียนมักเห็นสมการกับงานศิลปะเป็นคนละเรื่อง</li><li>การสร้างสมการเพื่อวาดลายด้วยมือใช้เวลาและต้องลองผิดลองถูก</li></ul></div><div class="card"><h3>แนวทางแก้ปัญหา</h3><ul><li>ใช้ภาพเป็นจุดเริ่มต้นที่เข้าใจง่าย</li><li>ใช้การประมวลผลภาพค้นหาขอบและจุดสำคัญ</li><li>แปลงพิกัดภาพเข้าสู่ระบบพิกัดคณิตศาสตร์</li><li>สร้างสมการหลายชนิดเพื่อแทนส่วนประกอบของลวดลาย</li></ul></div></div>
+<h3 style="margin-top:18px">วัตถุประสงค์ของโครงงาน</h3>
+<div class="grid g3"><div class="card"><strong>1. พัฒนาเครื่องมือ</strong><br>สร้างเว็บสำหรับแปลงภาพลายเส้นเป็นชุดสมการที่ใช้งานง่าย</div><div class="card"><strong>2. เชื่อมโยงการเรียนรู้</strong><br>ประยุกต์คณิตศาสตร์ Computer Vision และ Web Programming ในงานจริง</div><div class="card"><strong>3. สนับสนุนการศึกษา</strong><br>ช่วยสำรวจองค์ประกอบทางเรขาคณิตของลวดลายศิลปวัฒนธรรม</div></div>
+</section>
+
+<section id="io" class="section">
+<h2>3. ข้อมูลเข้า กระบวนการ และผลลัพธ์</h2>
+<table class="compare"><thead><tr><th>ส่วน</th><th>ข้อมูล</th><th>ความหมาย</th></tr></thead><tbody>
+<tr><td>Input</td><td>ภาพ JPG, JPEG หรือ PNG</td><td>ภาพลายเส้น รูปทรงเรขาคณิต หรือลวดลายที่มีความแตกต่างระหว่างเส้นกับพื้นหลังชัดเจน</td></tr>
+<tr><td>Process</td><td>Pixel → Grayscale/BW → Edge → Coordinate → Shape/Equation</td><td>แปลงข้อมูลภาพดิจิทัลให้เป็นข้อมูลเชิงคณิตศาสตร์</td></tr>
+<tr><td>Output</td><td>ภาพขาวดำ จุดข้อมูล จำนวนสมการ และชุดสมการ</td><td>ผลประมาณรูปทรงที่ผู้ใช้คัดลอกหรือดาวน์โหลดเป็น TXT ได้</td></tr>
+</tbody></table>
+<div class="warn"><strong>ภาพที่เหมาะ:</strong> เส้นเข้ม พื้นหลังอ่อน รูปทรงชัด และไม่มีรายละเอียดรบกวนมาก ภาพถ่ายซับซ้อน แสงไม่สม่ำเสมอ หรือพื้นหลังรกอาจให้ผลไม่ดี</div>
+</section>
+
+<section id="tech" class="section">
+<h2>4. เทคโนโลยีที่ใช้</h2>
+<div class="grid g4"><div class="card center"><div class="metric">HTML5</div><p>โครงสร้างหน้าเว็บ อัปโหลดไฟล์ และ Canvas</p></div><div class="card center"><div class="metric">CSS3</div><p>รูปแบบ Animation และ Responsive Design</p></div><div class="card center"><div class="metric">JS</div><p>อ่านภาพ คำนวณ วิเคราะห์ และสร้างสมการ</p></div><div class="card center"><div class="metric">Bootstrap</div><p>Grid, Card, Button และหน้าจอหลายขนาด</p></div></div>
+<div class="grid g2" style="margin-top:16px"><div class="card"><h3>HTML5 Canvas API</h3><p>นำภาพมาวาดบนพื้นที่ Canvas และอ่านค่าสี RGBA ของพิกเซลผ่าน <code>getImageData()</code> เพื่อใช้ในการคำนวณ</p></div><div class="card"><h3>Client-side Processing</h3><p>การประมวลผลเกิดใน Browser ของผู้ใช้ จึงเผยแพร่เป็น Static Website บน GitHub Pages ได้โดยไม่ต้องมีฐานข้อมูลหรือ Backend</p></div></div>
+<div class="info"><strong>ไม่ใช่ Generative AI หรือ Deep Learning:</strong> ระบบปัจจุบันใช้กฎ การคำนวณพิกเซล การตรวจจับขอบ การวิเคราะห์รูปทรง และการประมาณสมการด้วย JavaScript</div>
+</section>
+
+<section id="pipeline" class="section">
+<h2>5. ลำดับการทำงานของระบบจริง</h2>
+<div class="flow"><span class="step">เลือกภาพ</span><span class="arrow">→</span><span class="step">ตรวจไฟล์</span><span class="arrow">→</span><span class="step">Canvas</span><span class="arrow">→</span><span class="step">Sobel Edge</span><span class="arrow">→</span><span class="step">สกัดพิกัด</span><span class="arrow">→</span><span class="step">ขาว–ดำ</span><span class="arrow">→</span><span class="step">ค้นหารูปทรง</span><span class="arrow">→</span><span class="step">สร้างสมการ</span><span class="arrow">→</span><span class="step">แสดง/ดาวน์โหลด</span></div>
+<table style="margin-top:16px"><thead><tr><th>ขั้นตอน</th><th>ฟังก์ชันหลัก</th><th>สิ่งที่เกิดขึ้น</th></tr></thead><tbody>
+<tr><td>1. รับไฟล์</td><td><code>handleFileSelect()</code></td><td>ตรวจชนิด JPG/PNG และขนาดไม่เกิน 16 MB</td></tr>
+<tr><td>2. แสดงตัวอย่าง</td><td><code>loadImagePreview()</code></td><td>FileReader อ่านไฟล์เป็น Data URL และเก็บขนาดภาพ</td></tr>
+<tr><td>3. เริ่มประมวลผล</td><td><code>processImage()</code></td><td>ควบคุมงานทุกขั้นและอัปเดต Progress</td></tr>
+<tr><td>4. ตรวจขอบ</td><td><code>performMultiLevelEdgeDetection()</code></td><td>วาดภาพบน Canvas แล้วเรียก Sobel Filter</td></tr>
+<tr><td>5. สกัดพิกัด</td><td><code>extractRealCoordinates()</code></td><td>เลือกจุดขอบที่ผ่าน threshold และแปลงเป็นแกนคณิตศาสตร์</td></tr>
+<tr><td>6. สร้างสมการ</td><td><code>generateAdvancedEquations()</code></td><td>ใช้ Direct Pixel Mapping เป็นเส้นทางหลัก ก่อนใช้วิธีวิเคราะห์อื่นเป็น fallback</td></tr>
+<tr><td>7. แสดงผล</td><td><code>displayAdvancedResults()</code></td><td>แสดงสถิติ รายการสมการ ปุ่มคัดลอก และดาวน์โหลด</td></tr>
+</tbody></table>
+</section>
+
+<section id="image" class="section">
+<h2>6. ระบบมองภาพอย่างไร?</h2>
+<div class="grid g2"><div class="card"><h3>6.1 Grayscale และภาพขาว–ดำ</h3><p>ค่าสีแดง เขียว น้ำเงิน ถูกแปลงเป็นความสว่างโดยให้น้ำหนักไม่เท่ากัน เพราะสายตามนุษย์รับรู้แต่ละสีต่างกัน</p><div class="formula">Gray = 0.299R + 0.587G + 0.114B</div><p>จากนั้นใช้ threshold 128: ค่าสว่างมากกว่า 128 เป็นสีขาว มิฉะนั้นเป็นสีดำ</p></div><div class="card"><h3>6.2 Sobel Edge Detection</h3><p>Sobel ใช้ kernel ขนาด 3×3 วัดการเปลี่ยนแปลงความสว่างแนวนอนและแนวตั้ง ได้ค่า <em>Gx</em> และ <em>Gy</em></p><div class="formula">Edge magnitude = √(Gx² + Gy²)</div><p>จุดที่ magnitude มากกว่า threshold 100 ถูกพิจารณาเป็นจุดขอบ</p></div></div>
+<div class="critical"><strong>ข้อควรระวังในการนำเสนอ:</strong> แม้ข้อความอธิบายเก่าบางตำแหน่งในหน้าเว็บใช้คำว่า “Canny” แต่โค้ดเส้นทางปัจจุบันเรียก <code>applySobelFilter()</code> และใช้ Sobel kernels โดยตรง จึงควรตอบว่าใช้ Sobel Operator</div>
+</section>
+
+<section id="math" class="section">
+<h2>7. การแปลงพิกเซลเป็นพิกัดคณิตศาสตร์</h2>
+<div class="grid g2"><div class="card"><h3>พิกัดภาพ</h3><p>จุดกำเนิดอยู่มุมซ้ายบน ค่า x เพิ่มไปทางขวา และ y เพิ่มลงด้านล่าง</p></div><div class="card"><h3>พิกัดคณิตศาสตร์</h3><p>ระบบย้ายจุดกำเนิดไปกลางภาพ ค่า x เพิ่มไปทางขวา และ y เพิ่มขึ้นด้านบน จึงต้องกลับเครื่องหมายแกน y</p></div></div>
+<div class="formula" style="margin-top:14px">scale = min(width, height) / 20<br>mathX = (pixelX − width/2) / scale<br>mathY = (height/2 − pixelY) / scale</div>
+<div class="info"><strong>ทำไมต้องหารด้วย scale?</strong> เพื่อย่อพิกัดภาพหลายร้อยหรือหลายพันพิกเซลให้อยู่ในช่วงประมาณ −10 ถึง 10 ซึ่งนำไปวาดบนระบบพิกัดได้สะดวก</div>
+</section>
+
+<section id="equations" class="section">
+<h2>8. สมการที่ระบบสามารถสร้าง</h2>
+<table><thead><tr><th>รูปแบบ</th><th>ตัวอย่างแนวคิด</th><th>ใช้แทนอะไร</th></tr></thead><tbody>
+<tr><td>จุด/วงกลมขนาดเล็ก</td><td><code>(x−h)²+(y−k)²=r²</code></td><td>จุดสำคัญจากพิกเซลเข้ม</td></tr>
+<tr><td>เส้นตรง</td><td><code>y=mx+b</code> หรือ <code>x=c</code></td><td>ขอบแนวนอน แนวตั้ง และแนวทแยง</td></tr>
+<tr><td>พาราโบลา/พหุนาม</td><td><code>y=ax²+bx+c</code></td><td>เส้นโค้งที่ประมาณได้ด้วย polynomial</td></tr>
+<tr><td>วงกลมและวงรี</td><td><code>(x−h)²/a²+(y−k)²/b²=1</code></td><td>รูปทรงปิดหรือส่วนโค้ง</td></tr>
+<tr><td>ตรีโกณมิติ</td><td><code>y=A sin(Bx+C)+D</code></td><td>รูปแบบคลื่นหรือส่วนโค้งที่มีคาบ</td></tr>
+<tr><td>สมการมีโดเมน</td><td><code>y=mx+b {a≤x≤b}</code></td><td>จำกัดให้แสดงเฉพาะช่วงที่พบในภาพ</td></tr>
+</tbody></table>
+<h3 style="margin-top:18px">Polynomial Regression ทำงานอย่างไร?</h3>
+<div class="card"><p>เมื่อใช้ส่วน Polynomial Regression ระบบสร้าง Vandermonde Matrix จากค่า x แล้วหาสัมประสิทธิ์ด้วยวิธี Least Squares/Normal Equations และ Gaussian Elimination</p><div class="formula">y ≈ a₀ + a₁x + a₂x² + … + aₙxⁿ<br>(AᵀA)c = Aᵀy</div><p class="small">หมายเหตุ: เส้นทางทำงานปัจจุบันให้ Direct Pixel Mapping ทำงานก่อน ดังนั้น Polynomial Regression ไม่ได้เป็นวิธีเดียวและไม่จำเป็นต้องเป็นผลลัพธ์หลักของทุกภาพ</p></div>
+</section>
+
+<section id="results" class="section">
+<h2>9. อ่านผลลัพธ์อย่างไรให้ถูกต้อง</h2>
+<div class="grid g3"><div class="card"><h3>จำนวนสมการ</h3><p>จำนวนองค์ประกอบสมการที่ระบบสร้าง ไม่ใช่จำนวนรูปทรงจริงทั้งหมดในภาพ</p></div><div class="card"><h3>จำนวนจุดข้อมูล</h3><p>จำนวนจุดขอบที่สกัดได้หลัง sampling/filtering ขึ้นกับขนาด ความคมชัด และรายละเอียดของภาพ</p></div><div class="card"><h3>ความแม่นยำ</h3><p>ในโค้ดปัจจุบันบางสมการกำหนดคะแนนจากกฎของตัวสร้างสมการ เช่น 0.99 จึงยังไม่ควรใช้เป็นหลักฐานว่าเหมือนภาพ 99%</p></div></div>
+<div class="warn"><strong>R², RMSE และ MAE:</strong> โค้ดมีฟังก์ชันคำนวณค่าสถิติสำหรับ Polynomial Regression แต่หน้าผลลัพธ์หลักปัจจุบันเน้นชุดสมการจาก Direct Pixel Mapping จึงไม่ควรอ้างว่าทุกสมการผ่านการประเมินด้วย R²/RMSE/MAE</div>
+<table><thead><tr><th>ควรพูด</th><th>ไม่ควรพูด</th></tr></thead><tbody><tr><td class="yes">ระบบสร้างสมการเพื่อประมาณองค์ประกอบของภาพ</td><td class="no">ระบบหาสมการต้นฉบับที่ถูกต้องแน่นอน</td></tr><tr><td class="yes">คะแนนที่แสดงเป็นค่าประเมินภายในโปรแกรม</td><td class="no">ความแม่นยำผ่านการทดสอบแล้ว 99%</td></tr><tr><td class="yes">ผลขึ้นกับคุณภาพและชนิดของภาพ</td><td class="no">ใช้ได้แม่นยำเท่ากันกับภาพทุกชนิด</td></tr></tbody></table>
+</section>
+
+<section id="files" class="section">
+<h2>10. โครงสร้างไฟล์และส่วนสำคัญของโค้ด</h2>
+<div class="grid g2"><div class="filetree">ImagetoPolynomial/
+├── index.html          หน้าโปรแกรมหลัก
+├── styles.css         รูปแบบ สี และ Responsive UI
+├── script.js          การอ่านภาพ วิเคราะห์ และสร้างสมการ
+├── project-guide.html คู่มือฉบับนี้
+├── package.json       ข้อมูลโปรเจกต์และคำสั่งรัน
+├── README.md          คำอธิบายสำหรับนักพัฒนา
+└── .github/           การตั้งค่าที่เกี่ยวกับ GitHub</div><div class="card"><h3>ตัวแปรสถานะสำคัญ</h3><ul><li><code>currentImageData</code> — ภาพที่อัปโหลดและขนาดภาพ</li><li><code>processedResults</code> — ผลที่เตรียมไว้สำหรับดาวน์โหลด</li><li><code>edgePoints</code> — จุดที่สกัดจากภาพ</li><li><code>currentEquations</code> — ชุดสมการที่กำลังแสดง</li></ul><h3>รูปแบบระบบ</h3><p>เป็น Single Page Application แบบ Vanilla JavaScript โดยไม่มี Backend และไม่มีฐานข้อมูล</p></div></div>
+</section>
+
+<section id="test" class="section">
+<h2>11. แนวทางทดสอบโครงงานอย่างเป็นระบบ</h2>
+<div class="card"><h3>ชุดภาพทดสอบที่ควรเตรียม</h3><ol class="checklist"><li>เส้นตรงแนวนอน แนวตั้ง และแนวทแยง</li><li>วงกลม วงรี และพาราโบลา</li><li>ลายเส้นขาว–ดำที่คมชัด</li><li>ภาพเดียวกันที่มีความละเอียดต่างกัน</li><li>ภาพมี noise ภาพเบลอ และพื้นหลังซับซ้อน</li><li>ภาพสีอ่อนบนพื้นหลังอ่อน เพื่อทดสอบกรณีที่ขอบไม่ชัด</li></ol></div>
+<table style="margin-top:14px"><thead><tr><th>สิ่งที่วัด</th><th>วิธีวัดที่แนะนำ</th></tr></thead><tbody><tr><td>ตรวจพบรูปทรงหรือไม่</td><td>นับภาพที่ตรวจชนิดรูปทรงหลักได้ถูกต้องเทียบกับภาพทั้งหมด</td></tr><tr><td>ความใกล้เคียงของเส้น</td><td>สุ่มจุดบนเส้นผลลัพธ์และวัดระยะถึงขอบภาพเฉลี่ย</td></tr><tr><td>เวลาในการประมวลผล</td><td>จับเวลาตั้งแต่กดสร้างสมการจนแสดงผล แยกตามขนาดภาพ</td></tr><tr><td>ความพึงพอใจผู้ใช้</td><td>แบบประเมินความง่าย ความชัดเจน และประโยชน์ต่อการเรียนรู้</td></tr></tbody></table>
+<div class="good"><strong>ถ้าต้องการกล่าวว่า “แม่นยำ” ในอนาคต:</strong> ต้องกำหนดชุดข้อมูลทดสอบ เกณฑ์คำตอบที่ถูกต้อง และสูตรวัดผลให้ชัดเจนก่อน แล้วจึงรายงานค่าจากการทดลองจริง</div>
+</section>
+
+<section id="limits" class="section">
+<h2>12. ข้อจำกัดของโครงงาน</h2>
+<table><thead><tr><th>ข้อจำกัด</th><th>ผลกระทบ</th></tr></thead><tbody>
+<tr><td>Threshold คงที่</td><td>ค่า 100 สำหรับขอบและ 128 สำหรับขาว–ดำอาจไม่เหมาะกับภาพทุกสภาพแสง</td></tr>
+<tr><td>ภาพซับซ้อน</td><td>พื้นผิว สี เงา และเส้นจำนวนมากทำให้เกิดจุดหรือสมการที่ไม่ต้องการ</td></tr>
+<tr><td>รูปทรงหลายค่า y ต่อ x</td><td>Polynomial แบบ y=f(x) เพียงสมการเดียวแทนวงกลมหรือเส้นตั้งได้ไม่ครบ จึงต้องใช้สมการชนิดอื่นและ domain</td></tr>
+<tr><td>คะแนน accuracy</td><td>บางค่าถูกกำหนดเชิง heuristic ยังไม่ใช่ผล validation จาก ground truth</td></tr>
+<tr><td>ประสิทธิภาพ</td><td>การสแกนทุกพิกเซลและเปรียบเทียบจุดจำนวนมากอาจช้ากับภาพขนาดใหญ่</td></tr>
+<tr><td>การประมาณ</td><td>สมการที่ได้อาจแทนโครงร่างสำคัญ แต่ไม่รักษารายละเอียด สี และพื้นผิวทั้งหมด</td></tr>
+<tr><td>ทำงานฝั่งผู้ใช้</td><td>ประสิทธิภาพขึ้นกับ Browser และอุปกรณ์ของผู้ใช้</td></tr>
+</tbody></table>
+</section>
+
+<section id="future" class="section">
+<h2>13. แนวทางพัฒนาต่อ</h2>
+<div class="grid g3"><div class="card"><h3>Adaptive Threshold</h3><p>เลือก threshold ตามความสว่างในแต่ละบริเวณ เพื่อรองรับภาพแสงไม่สม่ำเสมอ</p></div><div class="card"><h3>Contour & Segmentation</h3><p>ติดตามเส้นขอบเป็นกลุ่มต่อเนื่องก่อนฟิตสมการ ลดจุดรบกวนและสมการซ้ำ</p></div><div class="card"><h3>วัดผลจริง</h3><p>สร้างชุดทดสอบพร้อม ground truth และรายงาน precision, error หรือ similarity ที่นิยามชัดเจน</p></div><div class="card"><h3>ปรับประสิทธิภาพ</h3><p>ย่อภาพ ใช้ Web Worker หรือ sampling แบบปรับตัว เพื่อลดเวลาประมวลผล</p></div><div class="card"><h3>แก้ไขสมการ</h3><p>ให้ผู้ใช้เลือก ลบ รวม และปรับพารามิเตอร์ของสมการก่อนส่งออก</p></div><div class="card"><h3>ส่งออกเพิ่ม</h3><p>เพิ่ม JSON/CSV/SVG และสร้างลิงก์หรือรูปแบบที่นำเข้าโปรแกรมกราฟได้สะดวก</p></div></div>
+</section>
+
+<section id="qa" class="section qa">
+<h2>14. คำถามที่กรรมการมีโอกาสถาม</h2>
+<details open><summary>ทำไมถึงทำโครงงานนี้?</summary><p>ต้องการเชื่อมโยงศิลปะกับคณิตศาสตร์ และลดความยากของการเริ่มสร้างสมการจากลวดลายด้วยตนเอง โดยใช้ภาพเป็นข้อมูลตั้งต้น</p></details>
+<details><summary>ระบบใช้ AI หรือไม่?</summary><p>เวอร์ชันปัจจุบันไม่ใช่ Generative AI หรือ Deep Learning แต่ใช้ Computer Vision แบบอัลกอริทึม การวิเคราะห์พิกเซล การตรวจขอบ การตรวจรูปทรง และการประมาณสมการ</p></details>
+<details><summary>ใช้ Canny หรือ Sobel?</summary><p>โค้ดที่ทำงานจริงใช้ Sobel Operator ผ่านฟังก์ชัน <code>applySobelFilter()</code> เพื่อหาค่า gradient ในแนว x และ y</p></details>
+<details><summary>ทำไมต้องแปลงเป็นภาพขาว–ดำ?</summary><p>เพื่อลดความซับซ้อนจากหลายสี ให้ระบบแยกส่วนที่เป็นเส้นเข้มกับพื้นหลังได้ง่ายขึ้น</p></details>
+<details><summary>ทำไมต้องกลับแกน y?</summary><p>พิกัดภาพมีค่า y เพิ่มลงด้านล่าง แต่กราฟคณิตศาสตร์มีค่า y เพิ่มขึ้นด้านบน จึงต้องกลับทิศในการแปลงพิกัด</p></details>
+<details><summary>ทำไมไม่ใช้สมการพหุนามเพียงสมการเดียว?</summary><p>ภาพหนึ่งภาพอาจมีเส้นตั้ง วงกลม รูปทรงปิด และหลายเส้น ซึ่งไม่สามารถแทนด้วย y=f(x) สมการเดียวได้ จึงใช้สมการหลายประเภทและจำกัด domain</p></details>
+<details><summary>Least Squares คืออะไร?</summary><p>เป็นวิธีหาค่าสัมประสิทธิ์ที่ทำให้ผลรวมกำลังสองของความคลาดเคลื่อนระหว่างจุดข้อมูลกับเส้นสมการมีค่าน้อยที่สุด</p></details>
+<details><summary>ค่า 99% บอกว่าเหมือนภาพ 99% หรือไม่?</summary><p>ยังไม่ใช่ เพราะบางสมการกำหนดคะแนนจากกฎภายในโค้ด ต้องมีชุดทดสอบและ metric ที่ชัดเจนก่อนจึงจะเรียกเป็นความแม่นยำที่ผ่านการประเมินได้</p></details>
+<details><summary>ระบบเก็บภาพของผู้ใช้หรือไม่?</summary><p>ระบบทำงานใน Browser และไม่มี Backend/ฐานข้อมูล ภาพถูกอ่านเพื่อประมวลผลบนอุปกรณ์ในรอบการใช้งานนั้น</p></details>
+<details><summary>ภาพแบบใดให้ผลดีที่สุด?</summary><p>ภาพลายเส้นเข้มบนพื้นหลังอ่อน ขอบคม รูปทรงไม่ซ้อนกันมาก และไม่มีเงาหรือ noise มาก</p></details>
+<details><summary>จุดเด่นของโครงงานคืออะไร?</summary><p>ใช้งานผ่านเว็บได้ทันที ไม่ต้องส่งข้อมูลไป Server เชื่อมโยงหลายศาสตร์ และทำให้ผู้ใช้เห็นกระบวนการจากภาพไปสู่พิกัดและสมการอย่างเป็นรูปธรรม</p></details>
+<details><summary>ข้อจำกัดสำคัญที่สุดคืออะไร?</summary><p>ผลลัพธ์ขึ้นกับคุณภาพภาพและ threshold และคะแนนความแม่นยำปัจจุบันยังไม่ได้ validation ด้วยชุดข้อมูลมาตรฐาน</p></details>
+<details><summary>ถ้าพัฒนาต่อจะทำอะไรเป็นอันดับแรก?</summary><p>สร้างชุดภาพทดสอบที่มีคำตอบอ้างอิง ปรับ adaptive threshold และ contour tracking แล้ววัดความคลาดเคลื่อนของเส้นผลลัพธ์อย่างเป็นระบบ</p></details>
+<details><summary>ทำไมเลือกทำเป็นเว็บ?</summary><p>ผู้ใช้เปิดได้จากหลายอุปกรณ์ ไม่ต้องติดตั้งโปรแกรม และเผยแพร่ผ่าน GitHub Pages ได้ง่าย ขณะเดียวกัน Canvas และ JavaScript รองรับการประมวลผลภาพฝั่งผู้ใช้</p></details>
+</section>
+
+<section id="script" class="section">
+<h2>15. บทพูดสรุปสำหรับนำเสนอ</h2>
+<div class="card"><p>“โครงงาน POLYART เป็นเว็บแอปพลิเคชันที่เชื่อมโยงศิลปะ คณิตศาสตร์ และการเขียนโปรแกรม ผู้ใช้อัปโหลดภาพลายเส้นในรูปแบบ JPG หรือ PNG ระบบจะอ่านพิกเซลด้วย HTML5 Canvas แปลงค่าสีเป็นความสว่าง ตรวจหาขอบด้วย Sobel Operator และแปลงตำแหน่งพิกเซลเป็นพิกัดคณิตศาสตร์ จากนั้นระบบวิเคราะห์จุดและรูปทรงเพื่อสร้างชุดสมการ เช่น เส้นตรง วงกลม วงรี และพหุนาม พร้อมกำหนด domain ให้แสดงเฉพาะช่วงที่เกี่ยวข้อง ผลลัพธ์สามารถคัดลอกหรือดาวน์โหลดไปทดลองต่อได้ ระบบทำงานภายใน Browser โดยไม่ต้องมี Backend อย่างไรก็ตาม สมการที่ได้เป็นการประมาณลักษณะสำคัญของภาพ ผลจึงขึ้นกับความคมชัดและความซับซ้อนของภาพ และเรามีแผนพัฒนาชุดทดสอบกับการวัดความคลาดเคลื่อนให้เป็นระบบมากขึ้น”</p></div>
+<h3 style="margin-top:18px">10 คำที่ต้องตอบได้ทันที</h3>
+<div class="grid g4"><div class="card"><strong>Pixel</strong><br>หน่วยย่อยของภาพดิจิทัล</div><div class="card"><strong>Grayscale</strong><br>ค่าความสว่างจากสี RGB</div><div class="card"><strong>Threshold</strong><br>ค่าตัดสินแบ่งกลุ่มข้อมูล</div><div class="card"><strong>Sobel</strong><br>ตัวดำเนินการตรวจขอบจาก gradient</div><div class="card"><strong>Coordinate</strong><br>ตำแหน่ง x และ y บนระนาบ</div><div class="card"><strong>Domain</strong><br>ช่วงค่า x/y ที่อนุญาต</div><div class="card"><strong>Regression</strong><br>การหาสมการประมาณข้อมูล</div><div class="card"><strong>Least Squares</strong><br>ลดผลรวมความคลาดเคลื่อนกำลังสอง</div><div class="card"><strong>Canvas</strong><br>พื้นที่วาดและอ่านพิกเซลใน Browser</div><div class="card"><strong>Client-side</strong><br>ประมวลผลบนอุปกรณ์ผู้ใช้</div></div>
+</section>
+
+<div class="footer">POLYART Project Guide • สำหรับทำความเข้าใจระบบและเตรียมนำเสนอโครงงาน • อ้างอิงการทำงานจากโค้ดเวอร์ชันปัจจุบัน</div>
+</div>
+</body>
+</html>
